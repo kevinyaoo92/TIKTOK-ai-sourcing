@@ -1,0 +1,62 @@
+# 环境变量（含 API key）
+.env
+
+# Chrome profile / 运行缓存
+.chrome_1688/
+.run/
+.run_1688_profile/
+.runtime/
+.workbuddy/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 日志
+*.log
+
+# 备份文件
+*.bak
+*.bak_*
+*.corrupt_*
+
+# 数据库和中转数据（单独备份）
+data/
+_state/*.db
+_state/*.STABLE_*.db
+database/
+
+# 项目根临时脚本
+/_*.py
+/check_*.py
+/deep_check.py
+/diag_*.py
+/fix_*.py
+/add_*.py
+/patch_*.py
+/read_*.py
+/refresh_*.py
+/rescore_all.py
+/run_batch10.py
+/run_cache20.py
+/run_one.py
+/run_pet.py
+/sample3.py
+/scan*.py
+/test_*.py
+/verify_*.py
+
+# 项目根临时输出
+/_*.png
+/_*.json
+/_*.txt
+/FAILED_THIS_RUN.txt
+
+# 无用目录
+/poc/
+/tiktok_top20_patch/
+
+*.broken_*
+

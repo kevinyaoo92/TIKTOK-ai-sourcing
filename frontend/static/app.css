@@ -1,0 +1,309 @@
+/* ==========================================================================
+   泰国 TikTok 市场机会雷达 · 第一界面（纯 UI 改版）
+   视觉方向：专业电商后台 / SaaS 工作台
+   规范：深蓝 #1e3a8a 主色 + 白底 + 浅灰 #f9fafb/#f3f4f6 + border-gray-200
+   原则：简洁克制、层级清晰、控件统一；无渐变、无霓虹、无特效
+   注意：本文件只保留业务 class（app.js 动态创建 / 测试断言依赖），
+         布局与大部分视觉由 index.html 中的 TailwindCSS 负责。
+   ========================================================================== */
+
+:root {
+  /* 色彩 */
+  --blue: #1e3a8a;              /* 主色：深蓝 */
+  --blue-hover: #152c6b;        /* 主色 hover */
+  --blue-bg: #eef2ff;           /* 选中态浅蓝底 */
+  --bg-page: #f9fafb;           /* 页面背景 */
+  --bg-card: #ffffff;
+  --text-main: #1f2329;
+  --text-sub: #5e6673;
+  --text-weak: #8c939e;
+  --text-placeholder: #b0b6bf;
+  --border: #e5e7eb;            /* gray-200 */
+  --border-light: #f3f4f6;      /* gray-100 */
+  --disabled-bg: #d1d5db;       /* gray-300 */
+  --hover-bg: #f9fafb;
+
+  /* 字体 */
+  --font-cn: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-en: "Segoe UI", Roboto, "Helvetica Neue", Arial, var(--font-cn);
+
+  /* 尺寸 */
+  --control-h: 44px;            /* h-11 */
+  --radius: 8px;                /* rounded-lg */
+  --radius-lg: 12px;            /* rounded-xl */
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-page);
+  color: var(--text-main);
+  font-family: var(--font-en);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------------- 表单标签 */
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.field-hint {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-weak);
+}
+
+/* ---------------------------------------------------------------- 下拉框 */
+.select-wrap { position: relative; }
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 34px 0 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-main);
+  font-family: var(--font-en);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select:hover:not(:disabled) { border-color: #d1d5db; }
+
+.select:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+}
+
+.select:disabled {
+  background: var(--hover-bg);
+  color: var(--text-placeholder);
+  cursor: not-allowed;
+}
+
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--text-sub);
+  border-bottom: 1.5px solid var(--text-sub);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- 二级类目多选面板 */
+.l2-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  max-height: 288px;            /* max-h-72 */
+  overflow-y: auto;
+}
+
+.l2-empty {
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-weak);
+}
+
+.l2-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;           /* py-3 px-4 */
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);  /* border-b border-gray-100 */
+  transition: background 0.12s ease;
+}
+
+.l2-item:last-child { border-bottom: none; }
+
+.l2-item:hover { background: var(--hover-bg); }
+
+.l2-item.selected { background: var(--blue-bg); }
+
+.l2-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0 10px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.l2-item input[type="checkbox"]:checked {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.l2-item input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.l2-item .l2-name {
+  font-size: 14px;
+  color: var(--text-main);
+  user-select: none;
+}
+
+/* 达到上限后未选 L2 置灰不可选 */
+.l2-item.disabled {
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.l2-item.disabled:hover { background: transparent; }
+
+.l2-item.disabled .l2-name { color: var(--text-placeholder); }
+
+.l2-item.disabled input[type="checkbox"] {
+  background: var(--hover-bg);
+  border-color: var(--border-light);
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------- 底部操作区 */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.action-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-weak);
+}
+
+/* 主按钮：bg-[#1e3a8a] text-white px-6 py-2.5 rounded-lg */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;           /* py-2.5 px-6 */
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius);
+  color: #ffffff;
+  font-family: var(--font-en);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) { background: var(--blue-hover); border-color: var(--blue-hover); }
+
+.btn-primary:active:not(:disabled) { background: #0f2557; border-color: #0f2557; }
+
+.btn-primary:disabled {
+  background: var(--disabled-bg);   /* gray-300 */
+  border-color: var(--disabled-bg);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: not-allowed;
+}
+
+/* 次级按钮（占位页返回） */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-h);
+  padding: 0 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-main);
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ---------------------------------------------------------------- 占位页 */
+.placeholder .selection-summary {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--hover-bg);
+  padding: 6px 16px;
+}
+
+.summary-row {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.summary-row:last-child { border-bottom: none; }
+
+.summary-label {
+  flex: none;
+  width: 96px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.summary-value {
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+/* ---------------------------------------------------------------- 提示 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  background: #32373f;
+  color: #ffffff;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+  z-index: 100;
+}
+
+/* ---------------------------------------------------------------- 移动端微调 */
+@media (max-width: 640px) {
+  .actions { flex-direction: column; align-items: stretch; gap: 12px; }
+  .action-hint { text-align: center; }
+  .btn-primary { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

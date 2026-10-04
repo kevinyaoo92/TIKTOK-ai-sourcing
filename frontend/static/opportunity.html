@@ -1,0 +1,1191 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>TikTok Shop 商品机会分析</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#1e3a8a',
+              hover: '#1e40af',
+              light: '#eff6ff',
+              border: '#bfdbfe'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 基础兜底：即使 Tailwind CDN 未加载，正文仍可读 */
+    body { font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f8fafc; }
+    .view { padding: 24px 16px 48px; }
+    @media (min-width: 1024px) { .view { padding: 32px 24px 64px; } }
+    /* 打印：隐藏交互控件，仅保留内容 */
+    @media print {
+      .no-print, .no-print * { display: none !important; }
+      body { background: #fff; }
+      .view { padding: 0; }
+      .card-print { break-inside: avoid; }
+    }
+    .bar-transition { transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .finder-progress-fill {
+      background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+      position: relative;
+      overflow: hidden;
+      transition: width 0.4s ease-out;
+    }
+    .finder-progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    .finder-spinner { animation: spin-slow 1s linear infinite; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+  <h1 class="sr-only">TikTok Shop 商品机会分析</h1>
+
+  <!-- ======================= 顶部导航 ======================= -->
+  <header class="sticky top-0 z-30 bg-brand text-white shadow-md no-print">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3">
+        <!-- 左侧：系统名称 -->
+        <div class="flex items-center gap-2 min-w-0">
+          <span aria-hidden="true" class="text-lg">📦</span>
+          <span class="font-semibold text-sm sm:text-base truncate">TikTok Shop 商品机会分析</span>
+        </div>
+
+        <!-- 中间：导航 -->
+        <nav class="order-3 w-full sm:order-none sm:w-auto flex items-center gap-1 bg-white/10 rounded-lg p-1" aria-label="主导航">
+          <button type="button" id="nav-back" class="nav-btn px-4 py-1.5 rounded-md text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white" data-view="back">返回</button>
+          <button type="button" id="nav-overview" class="nav-btn px-4 py-1.5 rounded-md text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white" data-view="overview">总览</button>
+          <button type="button" id="nav-list" class="nav-btn px-4 py-1.5 rounded-md text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white" data-view="list">列表</button>
+        </nav>
+
+        <!-- 右侧：周期 + 类目 -->
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 text-xs text-white/80">
+            <span aria-hidden="true">📅</span>
+            <span class="hidden sm:inline">数据周期</span>
+            <select id="period-select" class="bg-white text-slate-700 text-xs rounded-md px-2 py-1.5 border border-white/30 focus:outline-none" aria-label="数据周期">
+              <option>2026-08</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-1.5 text-xs text-white/80">
+            <span aria-hidden="true">🗂️</span>
+            <span class="hidden sm:inline">类目</span>
+            <select id="category-select" class="bg-white text-slate-700 text-xs rounded-md px-2 py-1.5 border border-white/30 focus:outline-none" aria-label="类目筛选"></select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" class="max-w-7xl mx-auto">
+
+    <!-- ======================= 1. 机会总览 ======================= -->
+    <section id="view-overview" class="view" aria-labelledby="overview-title">
+      <div class="flex flex-wrap items-end justify-between gap-2 mb-6">
+        <div>
+          <h2 id="overview-title" class="text-xl sm:text-2xl font-bold text-slate-900">机会总览</h2>
+          <p class="text-sm text-slate-500 mt-1">基于 2026-08 泰国站关键词数据，综合需求 / 转化 / 竞争三维评分</p>
+        </div>
+        <span class="text-xs text-slate-400">数据周期：2026-08</span>
+      </div>
+
+      <!-- 样本量警告 -->
+      <div id="sample-warning" class="hidden mb-4 inline-flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-700">
+        <span aria-hidden="true">⚠️</span>
+        <span>该 L2 关键词样本较少（&lt; 30），评分结果仅供参考</span>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div id="stat-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8"></div>
+
+      <!-- Top 机会卡片网格 -->
+      <h3 class="text-lg font-semibold text-slate-800 mb-4">Top 机会</h3>
+      <div id="opportunity-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5"></div>
+    </section>
+
+    <!-- ======================= 2. 机会列表 ======================= -->
+    <section id="view-list" class="view hidden" aria-labelledby="list-title">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 id="list-title" class="text-xl sm:text-2xl font-bold text-slate-900">机会列表</h2>
+        <div class="w-full sm:w-72">
+          <input id="search-input" type="search" placeholder="搜索商品方向或关键词…"
+                 class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+        </div>
+      </div>
+      <p id="list-count" class="text-sm text-slate-500 mb-3"></p>
+      <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table class="min-w-[760px] w-full text-sm" aria-label="机会列表">
+          <caption class="sr-only">机会列表，点击表头可按对应分数排序</caption>
+          <thead>
+            <tr class="bg-slate-50 text-left text-slate-500">
+              <th scope="col" class="px-4 py-3 font-medium">商品方向</th>
+              <th scope="col" class="px-4 py-3 font-medium">
+                <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-brand" data-key="score">机会分<span class="sort-arrow" data-arrow="score"></span></button>
+              </th>
+              <th scope="col" class="px-4 py-3 font-medium">评级</th>
+              <th scope="col" class="px-4 py-3 font-medium">
+                <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-brand" data-key="demandScore">需求分<span class="sort-arrow" data-arrow="demandScore"></span></button>
+              </th>
+              <th scope="col" class="px-4 py-3 font-medium">
+                <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-brand" data-key="conversionScore">转化分<span class="sort-arrow" data-arrow="conversionScore"></span></button>
+              </th>
+              <th scope="col" class="px-4 py-3 font-medium">
+                <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-brand" data-key="competitionScore">竞争分<span class="sort-arrow" data-arrow="competitionScore"></span></button>
+              </th>
+              <th scope="col" class="px-4 py-3 font-medium">类目</th>
+              <th scope="col" class="px-4 py-3 font-medium">代表关键词</th>
+              <th scope="col" class="px-4 py-3 font-medium">操作</th>
+            </tr>
+          </thead>
+          <tbody id="list-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= 3. 机会详情 ======================= -->
+    <section id="view-detail" class="view hidden" aria-labelledby="detail-title"></section>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="polite"
+       class="no-print fixed left-1/2 -translate-x-1/2 bottom-8 z-50 hidden rounded-lg bg-slate-800 text-white text-sm px-5 py-2.5 shadow-lg">
+    感谢反馈
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    /* ==================================================================
+       真实数据分析链路（POST /api/analyze）
+       数据源：tiktok_market.db 真实采集 + Stage0-5 确定性评分 + DeepSeek 语义
+       ================================================================== */
+
+    var RATING_STYLE = {
+      S: { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", label: "S 级" },
+      A: { badge: "bg-blue-100 text-blue-700", dot: "bg-blue-500", label: "A 级" },
+      B: { badge: "bg-amber-100 text-amber-700", dot: "bg-amber-400", label: "B 级" },
+      C: { badge: "bg-gray-200 text-gray-600", dot: "bg-gray-400", label: "C 级" }
+    };
+
+    var el = {
+      overview: document.getElementById("view-overview"),
+      list: document.getElementById("view-list"),
+      detail: document.getElementById("view-detail"),
+      statGrid: document.getElementById("stat-grid"),
+      oppGrid: document.getElementById("opportunity-grid"),
+      listBody: document.getElementById("list-body"),
+      listCount: document.getElementById("list-count"),
+      searchInput: document.getElementById("search-input"),
+      categorySelect: document.getElementById("category-select"),
+      toast: document.getElementById("toast")
+    };
+
+    /* ---------------------------------------------------------- 状态 */
+    var STATE = {
+      opportunities: [],   // 真实机会（API 返回）
+      selection: null,     // {country, level1, level2[], period, ...}
+      activePeriod: null,  // 后端 active_period，页面加载时异步获取
+      loading: false,
+      error: null,
+      cohortSize: 0,
+      ratingFilter: null,  // 当前等级过滤：null / S / A / B / C
+      summary: {}          // 后端返回的 summary
+    };
+
+    // 页面加载时拉取后端 active_period，返回 Promise 供初始化逻辑 await
+    var periodReady = fetch("/api/active_period")
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.period) return;
+        STATE.activePeriod = d.period;
+        var sel = document.getElementById("period-select");
+        if (sel) sel.innerHTML = "<option>" + d.period + "</option>";
+        var titleP = document.querySelector("#overview-title + p");
+        if (titleP) {
+          titleP.textContent = "基于 " + d.period + " 泰国站关键词数据，综合需求 / 转化 / 竞争三维评分";
+        }
+        var spans = document.querySelectorAll("span");
+        for (var i = 0; i < spans.length; i++) {
+          var t = spans[i].textContent || "";
+          if (t.indexOf("数据周期：") === 0) {
+            spans[i].textContent = "数据周期：" + d.period;
+          }
+        }
+      })
+      .catch(function () { /* ignore */ });
+
+    /* ---------------------------------------------------------- 工具 */
+    function $(id) { return document.getElementById(id); }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    var toastTimer = null;
+    function showToast(msg) {
+      el.toast.textContent = msg;
+      el.toast.classList.remove("hidden");
+      if (toastTimer) window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(function () { el.toast.classList.add("hidden"); }, 2200);
+    }
+
+    function ratingInfo(r) { return RATING_STYLE[r] || RATING_STYLE.C; }
+
+    /* 把 API 机会对象映射为前端渲染字段（保持视觉结构一致） */
+    function normOpp(o, idx) {
+      return {
+        id: o.opportunity_id || ("opp-" + idx),
+        name: o.name_cn || o.representative_keyword,
+        score: o.score,
+        rating: o.rating,
+        action: o.action,
+        category: (o.level1 || STATE.selection && STATE.selection.level1 || "") + " > " + (o.level2 || STATE.selection && STATE.selection.level2 || ""),
+        period: o.period || (STATE.selection && STATE.selection.period) || STATE.activePeriod || "2026-08",
+        demandScore: o.demand_score,
+        conversionScore: o.conversion_score,
+        competitionScore: o.competition_score,
+        keyword: o.representative_keyword,
+        keywordCn: o.representative_keyword_cn || o.name_cn || "",
+        searchTerms1688: o.search_terms_1688 || [],
+        relatedKeywords: (o.related_keywords || []).map(function (w) {
+          if (typeof w === "string") {
+            return { word: w, wordCn: "", search: "—", ctor: "—", products: "—" };
+          }
+          return {
+            word: w.keyword || "",
+            wordCn: w.keyword_cn || "",
+            search: w.search || "—",
+            ctor: w.ctor || "—",
+            products: w.products || "—"
+          };
+        }),
+        evidence: o.evidence || [],
+        aiSummary: o.ai_summary || "",
+        marketJudgment: o.market_judgment || "—",
+        competitionJudgment: o.competition_judgment || "—",
+        suitable: o.suitable_for_tiktok_th || "—",
+        searchTerms1688: o.search_terms_1688 || [],
+        priceSuggestion: "",
+        priceTag: "",
+        contentSuggestions: [],
+        risks: o.risks || [],
+        confidence: o.confidence || 0,
+        sampleSize: STATE.cohortSize || o.summary_cohort_size || 0
+      };
+    }
+
+    function fmt1(v) {
+      if (v === null || v === undefined || v === "") return "—";
+      var n = Number(v);
+      return isNaN(n) ? String(v) : n.toFixed(1);
+    }
+
+    function miniBar(label, value, color, maxVal) {
+      var v = Number(value);
+      if (isNaN(v)) v = 0;
+      var mx = Number(maxVal);
+      if (isNaN(mx) || mx <= 0) mx = 1;
+      var ratio = v / mx;
+      if (ratio < 0) ratio = 0;
+      if (ratio > 1) ratio = 1;
+      var w = ratio * 100;
+      var inner = (v > 0)
+        ? '<div class="bar-transition h-full rounded-full ' + color + '" style="width:' + w.toFixed(1) + '%"></div>'
+        : '';
+      var numCls;
+      if (v >= 0.9) numCls = "text-emerald-700";
+      else if (v >= 0.7) numCls = "text-blue-700";
+      else numCls = "text-amber-700";
+      return '<div class="flex items-center gap-3">' +
+        '<span class="w-12 shrink-0 text-xs text-slate-500">' + label + '</span>' +
+        '<div class="flex-1 h-3 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">' +
+          inner +
+        '</div>' +
+        '<span class="w-11 shrink-0 text-right text-base font-bold tabular-nums ' + numCls + '">' + fmt1(value) + '</span>' +
+      '</div>';
+    }
+
+    /* ---------------------------------------------------------- 视图切换 */
+    function showView(name) {
+      el.overview.classList.toggle("hidden", name !== "overview");
+      el.list.classList.toggle("hidden", name !== "list");
+      el.detail.classList.toggle("hidden", name !== "detail");
+      document.querySelectorAll(".nav-btn").forEach(function (b) {
+        var active = b.getAttribute("data-view") === name;
+        b.classList.toggle("bg-white/20", active);
+        b.classList.toggle("text-white", active);
+        b.classList.toggle("text-white/80", !active);
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /* ---------------------------------------------------------- 总览页 */
+    function renderStats(list) {
+      var counts = { S: 0, A: 0, B: 0, C: 0 };
+      list.forEach(function (o) { counts[o.rating] = (counts[o.rating] || 0) + 1; });
+      var cards = [
+        { key: "S", title: "S 级数量", desc: "优先上架", extra: "bg-emerald-50 text-emerald-700" },
+        { key: "A", title: "A 级数量", desc: "建议上架", extra: "bg-blue-50 text-blue-700" },
+        { key: "B", title: "B 级数量", desc: "可上架", extra: "bg-amber-50 text-amber-700" },
+        { key: "C", title: "C 级数量", desc: "观察", extra: "bg-gray-100 text-gray-600" }
+      ];
+      el.statGrid.innerHTML = cards.map(function (c) {
+        var n = counts[c.key] || 0;
+        var active = STATE.ratingFilter === c.key;
+        var btnCls = active
+          ? "bg-brand text-white border border-brand"
+          : "bg-white text-slate-600 border border-slate-300 hover:border-brand hover:text-brand";
+        return '<div class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">' +
+          '<div class="flex items-center gap-2">' +
+            '<span class="h-2.5 w-2.5 rounded-full ' + ratingInfo(c.key).dot + '" aria-hidden="true"></span>' +
+            '<span class="text-sm text-slate-500">' + c.title + '</span>' +
+          '</div>' +
+          '<div class="mt-2 flex items-center justify-between">' +
+            '<span class="text-3xl font-bold ' + c.extra + '">' + n + '</span>' +
+            '<button type="button" class="rating-filter-btn rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' + btnCls + '" data-rating="' + c.key + '">' + (active ? "取消" : "查看") + '</button>' +
+          '</div>' +
+          '<div class="mt-1 text-xs text-slate-400">' + c.desc + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function renderOverview() {
+      // 样本量警告
+      var warn = document.getElementById("sample-warning");
+      if (warn) {
+        var sz = STATE.summary && STATE.summary.sample_size;
+        if (sz === "small") {
+          warn.classList.remove("hidden");
+        } else {
+          warn.classList.add("hidden");
+        }
+      }
+      var filter = STATE.ratingFilter;
+      var visible;
+      if (filter) {
+        visible = STATE.opportunities.filter(function (o) { return o.rating === filter; });
+      } else {
+        visible = STATE.opportunities.filter(function (o) { return o.rating !== "C"; });
+      }
+      var sorted = visible.slice().sort(function (a, b) { return b.score - a.score; });
+      renderStats(STATE.opportunities);
+      if (sorted.length === 0) {
+        el.oppGrid.innerHTML = '<div class="col-span-full text-center py-16 text-slate-400">该等级暂无机会</div>';
+        return;
+      }
+      el.oppGrid.innerHTML = sorted.map(function (o) {
+        var r = ratingInfo(o.rating);
+        return '<article class="card-print rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col gap-4">' +
+          '<div class="flex items-start justify-between gap-3">' +
+            '<h4 class="text-base font-semibold text-slate-900 leading-snug">' + esc(o.name) + '</h4>' +
+            '<span class="shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ' + r.badge + '">' + r.label + '</span>' +
+          '</div>' +
+          '<div class="flex items-baseline gap-2">' +
+            '<span class="text-4xl font-bold text-brand tabular-nums">' + fmt1(o.score) + '</span>' +
+            '<span class="text-xs text-slate-400">机会分</span>' +
+          '</div>' +
+          '<div class="space-y-2">' +
+            (function(){
+              var _m = Math.max(o.demandScore||0, o.conversionScore||0, o.competitionScore||0);
+              if (_m <= 0) _m = 1;
+              return miniBar("需求", o.demandScore, "bg-blue-600", _m) +
+                     miniBar("转化", o.conversionScore, "bg-emerald-500", _m) +
+                     miniBar("竞争", o.competitionScore, "bg-amber-500", _m);
+            })() +
+          '</div>' +
+          '<div class="rounded-lg bg-slate-50 px-3 py-2 text-xs">' +
+            '<div class="text-slate-500">代表关键词</div>' +
+            '<div class="mt-0.5 font-medium text-slate-800">' + esc(o.keyword) + '</div>' +
+            '<div class="text-slate-400">' + esc(o.keywordCn) + '</div>' +
+          '</div>' +
+          '<div class="mt-auto flex gap-2">' +
+            '<button type="button" class="flex-1 rounded-lg border border-brand px-3 py-2 text-sm font-medium text-brand hover:bg-brand hover:text-white transition-colors" data-detail="' + esc(o.id) + '">查看详情</button>' +
+            '<button type="button" class="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover transition-colors" data-find-suppliers="' + esc(o.id) + '">去找货</button>' +
+          '</div>' +
+        '</article>';
+      }).join("");
+    }
+
+    /* ---------------------------------------------------------- 列表页 */
+    var sortState = { key: "score", dir: "desc" };
+
+    function currentList() {
+      var q = el.searchInput.value.trim().toLowerCase();
+      var list = STATE.opportunities.filter(function (o) {
+        if (!q) return true;
+        var hay = [o.name, o.keyword, o.keywordCn, o.category]
+          .concat(o.relatedKeywords.map(function (k) { return k.word + " " + k.wordCn; }))
+          .join(" ").toLowerCase();
+        return hay.indexOf(q) !== -1;
+      });
+      list.sort(function (a, b) {
+        var va = a[sortState.key];
+        var vb = b[sortState.key];
+        if (va < vb) return sortState.dir === "asc" ? -1 : 1;
+        if (va > vb) return sortState.dir === "asc" ? 1 : -1;
+        return 0;
+      });
+      return list;
+    }
+
+    function renderList() {
+      var list = currentList();
+      el.listCount.textContent = "共 " + list.length + " 个机会";
+      if (list.length === 0) {
+        el.listBody.innerHTML = '<tr><td colspan="9" class="px-4 py-10 text-center text-slate-400">未找到匹配的机会</td></tr>';
+        return;
+      }
+      el.listBody.innerHTML = list.map(function (o) {
+        var r = ratingInfo(o.rating);
+        return '<tr class="border-t border-slate-100 hover:bg-slate-50">' +
+          '<td class="px-4 py-3 font-medium text-slate-900">' + esc(o.name) + '</td>' +
+          '<td class="px-4 py-3"><span class="text-base font-bold text-brand tabular-nums">' + fmt1(o.score) + '</span></td>' +
+          '<td class="px-4 py-3"><span class="rounded-md px-2 py-0.5 text-xs font-medium ' + r.badge + '">' + r.label + '</span></td>' +
+          '<td class="px-4 py-3 text-slate-700 tabular-nums">' + fmt1(o.demandScore) + '</td>' +
+          '<td class="px-4 py-3 text-slate-700 tabular-nums">' + fmt1(o.conversionScore) + '</td>' +
+          '<td class="px-4 py-3 text-slate-700 tabular-nums">' + fmt1(o.competitionScore) + '</td>' +
+          '<td class="px-4 py-3 text-slate-500">' + esc(o.category) + '</td>' +
+          '<td class="px-4 py-3"><div class="text-slate-700">' + esc(o.keyword) + '</div><div class="text-xs text-slate-400">' + esc(o.keywordCn) + '</div></td>' +
+          '<td class="px-4 py-3"><button type="button" class="rounded-md border border-brand px-2.5 py-1 text-xs font-medium text-brand hover:bg-brand hover:text-white whitespace-nowrap" data-detail="' + o.id + '">查看详情</button></td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    function updateSortArrows() {
+      document.querySelectorAll(".sort-arrow").forEach(function (sp) {
+        var k = sp.getAttribute("data-arrow");
+        if (k === sortState.key) {
+          sp.textContent = sortState.dir === "asc" ? " ▲" : " ▼";
+        } else {
+          sp.textContent = "";
+        }
+      });
+    }
+
+    /* ---------------------------------------------------------- 找货模态 */
+    var FINDER = { taskId: null, timer: null, currentOppId: null };
+    var MS_COLLECTED = {};
+    var MS_LOGIN_STATE = "unknown";
+
+    function updateMiaoshouUI() {
+      var btn = document.getElementById("miaoshou-login-btn");
+      var tip = document.getElementById("miaoshou-login-tip");
+      if (btn) {
+        if (MS_LOGIN_STATE === "yes") {
+          btn.textContent = "已登陆妙手";
+          btn.disabled = true;
+          btn.classList.remove("bg-brand", "hover:bg-brand-hover", "cursor-pointer");
+          btn.classList.add("bg-emerald-500", "cursor-default");
+        } else {
+          btn.textContent = "登陆妙手";
+          btn.disabled = false;
+          btn.classList.remove("bg-emerald-500", "cursor-default");
+          btn.classList.add("bg-brand", "hover:bg-brand-hover", "cursor-pointer");
+        }
+      }
+      if (tip) {
+        tip.textContent = (MS_LOGIN_STATE === "no") ? "请先登陆妙手，再执行采集" : "";
+      }
+      document.querySelectorAll("[data-action='use-supplier']").forEach(function(b) {
+        b.disabled = (MS_LOGIN_STATE !== "yes");
+      });
+    }
+
+    function checkMiaoshouLogin() {
+      fetch("/api/miaoshou_check_login")
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          MS_LOGIN_STATE = (d && d.logged_in) ? "yes" : "no";
+          updateMiaoshouUI();
+        })
+        .catch(function(){
+          MS_LOGIN_STATE = "no";
+          updateMiaoshouUI();
+        });
+    }
+
+    function startMiaoshouLogin() {
+      fetch("/api/miaoshou_open_login", {method: "POST"});
+    }
+
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState !== "visible") return;
+      var modal = document.getElementById("finder-modal");
+      if (!modal || modal.classList.contains("hidden")) return;
+      checkMiaoshouLogin();
+    });
+
+    function getFinderEl() { return document.getElementById("finder-modal"); }
+    function getFinderBody() { return document.getElementById("finder-body"); }
+
+    function renderFinderLoading(pct, phase, kw) {
+      var body = getFinderBody();
+      var hasProgress = body.querySelector("#finder-pct");
+      if (!hasProgress) {
+        var kwLine = kw ? '<p class="text-xs text-brand mb-1">搜索词：' + esc(kw) + '</p>' : '';
+        body.innerHTML =
+          '<div class="text-center py-8">' +
+            '<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-light mb-4">' +
+              '<svg class="finder-spinner w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24">' +
+                '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+                '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>' +
+              '</svg>' +
+            '</div>' +
+            '<h3 class="text-lg font-semibold text-slate-800 mb-2">正在为您寻找优质货源</h3>' +
+            kwLine +
+            '<p class="text-sm text-slate-500 mb-8">请耐心等待······</p>' +
+            '<div class="max-w-md mx-auto">' +
+              '<div class="flex items-center justify-between text-sm mb-2">' +
+                '<span class="text-slate-500" id="finder-phase">' + esc(phase || "") + '</span>' +
+                '<span class="font-semibold text-brand tabular-nums" id="finder-pct">' + pct + '%</span>' +
+              '</div>' +
+              '<div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">' +
+                '<div class="finder-progress-fill h-full rounded-full" style="width:' + pct + '%"></div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      } else {
+        body.querySelector("#finder-pct").textContent = pct + "%";
+        body.querySelector("#finder-phase").textContent = phase;
+        body.querySelector(".finder-progress-fill").style.width = pct + "%";
+      }
+    }
+
+    function renderFinderResults(result) {
+      var body = getFinderBody();
+      if (!result || !result.results || !result.results.length) {
+        body.innerHTML =
+          '<div class="text-center py-8">' +
+            '<div class="text-4xl mb-3">😕</div>' +
+            '<h3 class="text-lg font-semibold text-slate-800 mb-2">暂未找到符合条件的货源</h3>' +
+            '<p class="text-sm text-slate-500 mb-6">建议更换关键词或稍后再试</p>' +
+            '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+          '</div>';
+        return;
+      }
+
+      var levelBadge = "";
+
+      var cards = result.results.map(function (x) {
+        var imgHtml = x.img
+          ? '<div class="w-28 h-28 rounded-lg overflow-hidden bg-white shrink-0 border border-slate-100"><img src="' + esc(x.img) + '" class="block w-full h-full object-cover" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"></div>'
+          : '<div class="w-28 h-28 rounded-lg bg-white shrink-0 border border-slate-100"></div>';
+
+        var titleText = x.title && x.title.length > 0 ? x.title : "(无标题)";
+        // SKU 维度文本
+        var skuText = "";
+        var dims = x.sku_dimensions || {};
+        var dimKeys = Object.keys(dims);
+        if (dimKeys.length === 1) {
+          skuText = dimKeys[0] + " " + dims[dimKeys[0]];
+        } else if (dimKeys.length > 1) {
+          skuText = dimKeys.map(function (k) { return k + " " + dims[k]; }).join(" / ");
+        }
+        return '<div class="border border-slate-200 rounded-xl p-4 mb-4 flex gap-4 hover:shadow-md transition-shadow">' +
+          imgHtml +
+          '<div class="flex-1 min-w-0">' +
+            '<div class="font-medium text-slate-800 mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' +
+              esc(titleText) +
+            '</div>' +
+            '<div class="text-xs text-slate-500 mb-2">' + esc(x.shop_name || "") + '</div>' +
+
+            '<div class="space-y-1 text-xs text-slate-600">' +
+              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>优质商家</div>' +
+              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>回头率 ' + x.rate + '%</div>' +
+              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>24h 揽收 ' + (x.rate24 !== null && x.rate24 !== undefined ? x.rate24 + '%' : '—') + '</div>' +
+              (skuText ? '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>SKU ' + esc(skuText) + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="flex flex-col gap-2 shrink-0 self-center">' +
+            '<a href="' + esc(x.link) + '" target="_blank" rel="noopener" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand hover:text-brand whitespace-nowrap text-center no-underline">1688货源</a>' +
+            (MS_COLLECTED[x.offer_id]
+              ? '<div class="flex flex-col gap-1 items-center">' +
+                  '<button type="button" class="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap cursor-not-allowed" disabled>已采集</button>' +
+                  '<div class="text-xs text-emerald-600 text-center leading-tight" style="max-width:140px">该商品已成功采集到妙手-公用采集箱</div>' +
+                '</div>'
+              : '<button type="button" class="rounded-lg px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap bg-brand hover:bg-brand-hover cursor-pointer" data-action="use-supplier" data-offer-id="' + esc(x.offer_id) + '"' + (MS_LOGIN_STATE === "yes" ? '' : ' disabled') + '>妙手采集</button>') +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      body.innerHTML =
+        '<div class="mb-5 pb-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">' +
+          '<h3 class="text-lg font-semibold text-slate-800">找到 ' + result.results.length + ' 个优质货源</h3>' +
+          '<div class="flex items-center gap-2">' +
+            '<span id="miaoshou-login-tip" class="text-xs text-slate-400"></span>' +
+            '<button type="button" id="miaoshou-login-btn" class="rounded-lg px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap bg-brand hover:bg-brand-hover cursor-pointer">登陆妙手</button>' +
+          '</div>' +
+        '</div>' +
+        '<div>' + cards + '</div>' +
+        '<div class="text-center pt-4">' +
+          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+        '</div>';
+      checkMiaoshouLogin();
+    }
+
+    function renderFinderError(msg) {
+      var body = getFinderBody();
+      body.innerHTML =
+        '<div class="text-center py-8">' +
+          '<div class="text-4xl mb-3">⚠️</div>' +
+          '<h3 class="text-lg font-semibold text-slate-800 mb-2">找货失败</h3>' +
+          '<p class="text-sm text-slate-500 mb-6">' + esc(msg) + '</p>' +
+          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+        '</div>';
+    }
+
+    function closeFinderModal() {
+      getFinderEl().classList.add("hidden");
+      if (FINDER.timer) { clearInterval(FINDER.timer); FINDER.timer = null; }
+      FINDER.taskId = null;
+      FINDER.currentOppId = null;
+    }
+
+    function pollFinderTask() {
+      if (!FINDER.taskId) return;
+      fetch("/api/find_suppliers/status?task_id=" + encodeURIComponent(FINDER.taskId))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.status === "running") {
+            renderFinderLoading(data.progress || 0, data.phase || "");
+          } else if (data.status === "done") {
+            if (FINDER.timer) { clearInterval(FINDER.timer); FINDER.timer = null; }
+            renderFinderResults(data.result);
+          } else if (data.status === "error") {
+            if (FINDER.timer) { clearInterval(FINDER.timer); FINDER.timer = null; }
+            renderFinderError(data.error || "未知错误");
+          }
+        })
+        .catch(function () { /* 静默重试 */ });
+    }
+
+    function openFinderModal(oppId) {
+      // 防抖：模态层已经打开就不响应
+      var modal = getFinderEl();
+      if (modal && !modal.classList.contains("hidden")) {
+        return;
+      }
+      if (FINDER.taskId) {
+        showToast("已有找货任务进行中");
+        return;
+      }
+      var opp = null;
+      for (var i = 0; i < STATE.opportunities.length; i++) {
+        if (STATE.opportunities[i].id === oppId) { opp = STATE.opportunities[i]; break; }
+      }
+      if (!opp) { showToast("未找到该机会"); return; }
+      // 用卡片显示的商品名全称作为搜索词（不截断，覆盖全部商品方向）
+      var terms = opp.searchTerms1688;
+      if (typeof terms === "string") { try { terms = JSON.parse(terms); } catch(e) { terms = []; } }
+      if (!Array.isArray(terms)) terms = [];
+      var kw = (opp.name || "").trim();
+      if (!kw) { kw = terms.length > 0 ? String(terms[0]).trim() : (opp.keywordCn || "").trim(); }
+      console.log("[FINDER] 候选搜索词 =", kw, "| terms =", terms);
+      // 去掉括号内容（如"野餐垫/折叠地垫（3-5英尺）" -> "野餐垫/折叠地垫"）
+      kw = kw.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+      // 去掉地域词（1688 供应链不受地域限制）
+      kw = kw.replace(/泰国|泰式|东南亚|跨境|海外|Thai\b/gi, "").trim();
+      // 斜杠换成空格（"密封自封袋/拉链收纳袋" -> "密封自封袋 拉链收纳袋"）
+      kw = kw.replace(/\//g, " ").replace(/\s+/g, " ").trim();
+      if (!kw) { showToast("缺少可搜索的商品名"); return; }
+      console.log("[FINDER] 搜索词 =", kw, "| opp.name =", opp.name);
+
+      FINDER.currentOppId = oppId;
+      FINDER.taskId = null;
+
+      getFinderEl().classList.remove("hidden");
+      renderFinderLoading(0, "正在创建任务...", kw);
+
+      fetch("/api/find_suppliers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: kw })
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (!data || data.status !== "ok") {
+          renderFinderError("任务创建失败");
+          return;
+        }
+        FINDER.taskId = data.task_id;
+        FINDER.timer = setInterval(pollFinderTask, 800);
+      }).catch(function (e) {
+        renderFinderError("请求失败: " + (e.message || ""));
+      });
+    }
+
+    /* ---------------------------------------------------------- 详情页 */
+    function openDetail(id) {
+      var o = null;
+      for (var i = 0; i < STATE.opportunities.length; i++) {
+        if (STATE.opportunities[i].id === id) { o = STATE.opportunities[i]; break; }
+      }
+      if (!o) { showToast("未找到该机会"); return; }
+      var r = ratingInfo(o.rating);
+
+      var evidenceRows = o.evidence.map(function (e) {
+        var scored = e.scored
+          ? '<span class="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-brand">是</span>'
+          : '<span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-400">否，仅参考</span>';
+        return '<tr class="border-t border-slate-100">' +
+          '<td class="px-4 py-2.5 font-medium text-slate-800">' + esc(e.dimension) + '</td>' +
+          '<td class="px-4 py-2.5 text-slate-600">' + esc(e.metric) + '</td>' +
+          '<td class="px-4 py-2.5 font-medium text-slate-900">' + esc(e.value) + '</td>' +
+          '<td class="px-4 py-2.5 text-slate-600">' + esc(e.position) + '</td>' +
+          '<td class="px-4 py-2.5 text-slate-700">' + esc(e.judgment) + '</td>' +
+          '<td class="px-4 py-2.5">' + scored + '</td>' +
+        '</tr>';
+      }).join("");
+
+      var relatedRows = o.relatedKeywords.map(function (k) {
+        var cnLine = k.wordCn ? '<div class="text-xs text-slate-400 mb-2">' + esc(k.wordCn) + '</div>' : '<div class="mb-2"></div>';
+        return '<div class="rounded-lg border border-slate-200 bg-white p-3">' +
+          '<div class="font-medium text-slate-800">' + esc(k.word) + '</div>' +
+          cnLine +
+          '<div class="grid grid-cols-3 gap-2 text-xs">' +
+            '<div><div class="text-slate-400">搜索量</div><div class="font-medium text-slate-700">' + esc(k.search) + '</div></div>' +
+            '<div><div class="text-slate-400">CTOR</div><div class="font-medium text-slate-700">' + esc(k.ctor) + '</div></div>' +
+            '<div><div class="text-slate-400">在售商品</div><div class="font-medium text-slate-700">' + esc(k.products) + '</div></div>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      var contentItems = o.contentSuggestions.map(function (s) {
+        return '<li class="flex items-start gap-2 text-sm text-slate-700"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true"></span>' + esc(s) + '</li>';
+      }).join("");
+
+      var riskItems = o.risks.map(function (s) {
+        return '<li class="flex items-start gap-2 text-sm text-slate-700"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-hidden="true"></span>' + esc(s) + '</li>';
+      }).join("");
+
+      var tagItems = o.searchTerms1688.map(function (s) {
+        return '<span class="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600">' + esc(s) + '</span>';
+      }).join("");
+
+      var actions = o.action ? "｜" + esc(o.action) : "";
+
+      el.detail.innerHTML =
+        /* (1) 头部信息 */
+        '<div class="max-w-5xl mx-auto space-y-6">' +
+        '<button type="button" class="no-print inline-flex items-center gap-1 text-sm text-slate-500 hover:text-brand" id="back-to-list">← 返回总览</button>' +
+        '<div class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<div class="flex flex-wrap items-start justify-between gap-4">' +
+            '<div class="min-w-0">' +
+              '<h2 id="detail-title" class="text-xl sm:text-2xl font-bold text-slate-900">' + esc(o.name) + '</h2>' +
+              '<div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">' +
+                '<span class="text-slate-400">' + esc(o.category) + '</span>' +
+                '<span aria-hidden="true">·</span>' +
+                '<span>数据周期：' + esc(o.period) + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="flex items-center gap-3">' +
+              '<span class="text-5xl font-bold text-brand tabular-nums">' + fmt1(o.score) + '</span>' +
+              '<div class="flex flex-col gap-1">' +
+                '<span class="rounded-md px-2 py-0.5 text-xs font-medium ' + r.badge + '">' + r.label + '｜' + esc(o.action) + '</span>' +
+                '<span class="text-xs text-slate-400">机会分</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        /* (2) 三维评分 */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-4">三维评分</h3>' +
+          '<div class="space-y-4 max-w-2xl">' +
+            (function(){
+              var _m = Math.max(o.demandScore||0, o.conversionScore||0, o.competitionScore||0);
+              if (_m <= 0) _m = 1;
+              return '<div>' + miniBar("需求强度", o.demandScore, "bg-blue-600", _m) + '</div>' +
+                     '<div>' + miniBar("购买转化", o.conversionScore, "bg-emerald-500", _m) + '</div>' +
+                     '<div>' + miniBar("竞争机会", o.competitionScore, "bg-amber-500", _m) + '</div>';
+            })() +
+          '</div>' +
+        '</section>' +
+
+        /* 去找货按钮 */
+        '<div class="mt-6">' +
+          '<button type="button" class="w-full rounded-lg bg-brand px-4 py-3 text-base font-semibold text-white hover:bg-brand-hover transition-colors flex items-center justify-center gap-2" data-find-suppliers="' + esc(o.id) + '">' +
+            '<span aria-hidden="true">🔍</span> 去找货' +
+          '</button>' +
+        '</div>' +
+
+        /* (3) 推荐依据（数据证据表） */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">推荐依据（数据证据）</h3>' +
+          '<div class="overflow-x-auto">' +
+            '<table class="min-w-[680px] w-full text-sm">' +
+              '<caption class="sr-only">' + esc(o.name) + ' 的评分依据明细</caption>' +
+              '<thead><tr class="bg-slate-50 text-left text-slate-500">' +
+                '<th scope="col" class="px-4 py-2.5 font-medium">维度</th>' +
+                '<th scope="col" class="px-4 py-2.5 font-medium">指标</th>' +
+                '<th scope="col" class="px-4 py-2.5 font-medium">数值</th>' +
+                '<th scope="col" class="px-4 py-2.5 font-medium">类目内位置</th>' +
+                '<th scope="col" class="px-4 py-2.5 font-medium">判断</th>' +
+                '<th scope="col" class="px-4 py-2.5 font-medium">是否评分</th>' +
+              '</tr></thead>' +
+              '<tbody>' + evidenceRows + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</section>' +
+
+        /* (4) AI 总结 */
+        '<section class="card-print rounded-xl border border-brand/20 bg-brand-light p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-2">AI 总结</h3>' +
+          '<p class="text-sm leading-relaxed text-slate-700">' + esc(o.aiSummary) + '</p>' +
+        '</section>' +
+
+        /* (5) 代表关键词与关联词 */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">代表关键词与关联词</h3>' +
+          '<div class="rounded-lg bg-slate-50 px-4 py-3 mb-4">' +
+            '<div class="text-xs text-slate-500">核心词</div>' +
+            '<div class="text-base font-semibold text-slate-900">' + esc(o.keyword) + '</div>' +
+            '<div class="text-sm text-slate-400">' + esc(o.keywordCn) + '</div>' +
+          '</div>' +
+          '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' + relatedRows + '</div>' +
+        '</section>' +
+
+        /* (6) 市场/竞争/适合三卡片 */
+        '<section class="grid grid-cols-1 md:grid-cols-3 gap-4" aria-label="综合判断">' +
+          '<div class="card-print rounded-xl border border-slate-200 bg-white p-5 shadow-sm">' +
+            '<h3 class="text-sm font-semibold text-slate-800 mb-2">市场判断</h3>' +
+            '<p class="text-sm text-slate-600 leading-relaxed">' + esc(o.marketJudgment) + '</p>' +
+          '</div>' +
+          '<div class="card-print rounded-xl border border-slate-200 bg-white p-5 shadow-sm">' +
+            '<h3 class="text-sm font-semibold text-slate-800 mb-2">竞争判断</h3>' +
+            '<p class="text-sm text-slate-600 leading-relaxed">' + esc(o.competitionJudgment) + '</p>' +
+          '</div>' +
+          '<div class="card-print rounded-xl border border-slate-200 bg-white p-5 shadow-sm">' +
+            '<h3 class="text-sm font-semibold text-slate-800 mb-2">是否适合泰国 TikTok Shop</h3>' +
+            '<p class="text-sm text-slate-600 leading-relaxed">' + esc(o.suitable) + '</p>' +
+          '</div>' +
+        '</section>' +
+
+        /* (7) 1688 搜索建议 */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">1688 搜索建议</h3>' +
+          '<div class="flex flex-wrap gap-2">' + tagItems + '</div>' +
+        '</section>' +
+
+        /* (8) 建议定价 */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">建议定价</h3>' +
+          '<div class="flex flex-wrap items-center gap-3">' +
+            '<span class="text-2xl font-bold text-brand">' + (o.priceSuggestion || "待补充") + '</span>' +
+            (o.priceTag ? '<span class="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">' + esc(o.priceTag) + '</span>' : '<span class="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">参考均价见上方证据表</span>') +
+          '</div>' +
+        '</section>' +
+
+        /* (9) 内容营销建议 */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">内容营销建议</h3>' +
+          '<ul class="space-y-2">' + (contentItems || '<li class="text-sm text-slate-400">暂无可展示内容建议，可基于 AI 分析补充。</li>') + '</ul>' +
+        '</section>' +
+
+        /* (10) 风险提示 */
+        '<section class="card-print rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">风险提示</h3>' +
+          '<ul class="space-y-2">' + riskItems + '</ul>' +
+        '</section>' +
+
+        /* (11) 数据口径声明 */
+        '<section class="rounded-xl border border-slate-200 bg-slate-50 p-5">' +
+          '<h3 class="text-sm font-semibold text-slate-600 mb-1.5">数据口径声明</h3>' +
+          '<p class="text-xs leading-relaxed text-slate-500">搜索量、点击、SKU销售指数、CTR、CTOR 均为平台指数/范围值，不代表真实订单或销售额。本报告只做相对机会判断，不承诺爆款。</p>' +
+        '</section>' +
+
+        /* (12) 置信度与更新时间 */
+        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">置信度与更新时间</h3>' +
+          '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">' +
+            '<div><div class="text-xs text-slate-400">数据周期</div><div class="font-medium text-slate-800">' + esc(o.period) + '</div></div>' +
+            '<div><div class="text-xs text-slate-400">样本量</div><div class="font-medium text-slate-800">' + o.sampleSize + '</div></div>' +
+            '<div><div class="text-xs text-slate-400">AI 置信度</div><div class="font-medium text-slate-800">' + o.confidence.toFixed(2) + '</div></div>' +
+            '<div><div class="text-xs text-slate-400">更新时间</div><div class="font-medium text-slate-800">2026-09-21</div></div>' +
+          '</div>' +
+        '</section>' +
+
+        /* (13) 反馈按钮 */
+        '<section class="no-print flex flex-wrap items-center gap-3 pt-2">' +
+          '<span class="text-sm text-slate-500">这个机会对你有用吗？</span>' +
+          '<button type="button" class="feedback-btn rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:border-brand hover:text-brand">有用</button>' +
+          '<button type="button" class="feedback-btn rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:border-brand hover:text-brand">没用</button>' +
+          '<button type="button" class="feedback-btn rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover">已上架</button>' +
+        '</section>' +
+        '</div>';
+
+      document.getElementById("back-to-list").addEventListener("click", function () {
+        history.back();
+      });
+      el.detail.querySelectorAll(".feedback-btn").forEach(function (b) {
+        b.addEventListener("click", function () { showToast("感谢反馈"); });
+      });
+      history.pushState({ view: "detail", id: id }, "", "#detail");
+      showView("detail");
+    }
+
+    /* ---------------------------------------------------------- 事件绑定 */
+    document.querySelectorAll(".nav-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var v = b.getAttribute("data-view");
+        if (v === "back") {
+          location.href = "/";
+          return;
+        }
+        showView(v);
+      });
+    });
+
+    window.addEventListener("popstate", function (ev) {
+      var v = (ev.state && ev.state.view) || "overview";
+      showView(v);
+    });
+
+    document.addEventListener("click", function (ev) {
+      var t = ev.target.closest("[data-detail]");
+      if (t) {
+        openDetail(t.getAttribute("data-detail"));
+        return;
+      }
+      var fb = ev.target.closest(".rating-filter-btn");
+      if (fb) {
+        var r = fb.getAttribute("data-rating");
+        STATE.ratingFilter = (STATE.ratingFilter === r) ? null : r;
+        renderOverview();
+        return;
+      }
+      var fs = ev.target.closest("[data-find-suppliers]");
+      if (fs) {
+        openFinderModal(fs.getAttribute("data-find-suppliers"));
+        return;
+      }
+      var cf = ev.target.closest("[data-action='close-finder']");
+      if (cf) {
+        closeFinderModal();
+        return;
+      }
+      var ml = ev.target.closest("#miaoshou-login-btn");
+      if (ml && !ml.disabled) {
+        startMiaoshouLogin();
+        return;
+      }
+      var us = ev.target.closest("[data-action='use-supplier']");
+      if (us) {
+        if (us.disabled) return;
+        if (MS_LOGIN_STATE !== "yes") return;
+        var oid = us.getAttribute("data-offer-id") || "";
+        if (!oid) return;
+        us.disabled = true;
+        us.textContent = "采集中...";
+        fetch("/api/miaoshou_collect", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({offer_id: oid})
+        }).then(function(r){ return r.json(); }).then(function(data){
+          if (data.status === "success") {
+            MS_COLLECTED[oid] = true;
+            us.textContent = "已采集";
+            us.disabled = true;
+            us.classList.remove("bg-brand", "hover:bg-brand-hover");
+            us.classList.add("bg-emerald-500", "cursor-not-allowed");
+            var tip = document.createElement("div");
+            tip.className = "text-xs text-emerald-600 text-center leading-tight";
+            tip.style.maxWidth = "140px";
+            tip.textContent = "该商品已成功采集到妙手-公用采集箱";
+            if (us.parentElement) us.parentElement.appendChild(tip);
+          } else if (data.status === "need_login") {
+            MS_LOGIN_STATE = "no";
+            us.disabled = false;
+            us.textContent = "妙手采集";
+            updateMiaoshouUI();
+          } else {
+            us.disabled = false;
+            us.textContent = "妙手采集";
+            alert("采集失败: " + (data.message || ""));
+          }
+        }).catch(function(e){
+          us.disabled = false;
+          us.textContent = "妙手采集";
+          alert("请求失败: " + e);
+        });
+        return;
+      }
+    });
+
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape") {
+        var m = getFinderEl();
+        if (m && !m.classList.contains("hidden")) {
+          closeFinderModal();
+        }
+      }
+    });
+
+    // 点模态层背景关闭
+    document.addEventListener("click", function (ev) {
+      if (ev.target && ev.target.id === "finder-modal") {
+        closeFinderModal();
+      }
+    });
+
+    el.searchInput.addEventListener("input", function () { renderList(); });
+
+    document.querySelectorAll(".sort-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var key = b.getAttribute("data-key");
+        if (sortState.key === key) {
+          sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+        } else {
+          sortState.key = key;
+          sortState.dir = "desc";
+        }
+        updateSortArrows();
+        renderList();
+      });
+    });
+
+    /* ---------------------------------------------------------- 初始化 */
+    try {
+      // 初始化历史记录：当前页 = 总览视图（不新增历史）
+      try { history.replaceState({ view: "overview" }, "", location.href); } catch (e) { /* ignore */ }
+
+      // 读取跳转参数：URL query 优先，localStorage 兜底（第一界面双通道传递）
+      var currentSelection = null;
+      try {
+        var qs = new URLSearchParams(window.location.search);
+        if (qs.get("level1") || qs.get("level2")) {
+          currentSelection = {
+            country: qs.get("country") || "泰国",
+            level1: qs.get("level1") || "",
+            level2: (qs.get("level2") || "").split(",").filter(Boolean)
+          };
+        }
+      } catch (e) { /* ignore */ }
+      if (!currentSelection) {
+        try {
+          var rawSel = localStorage.getItem("analysis-selection");
+          if (rawSel) currentSelection = JSON.parse(rawSel);
+        } catch (e) { /* ignore */ }
+      }
+      STATE.selection = currentSelection;
+
+      periodReady.then(function () {
+
+      // 数据周期：从 STATE.activePeriod 读取（页面加载时异步获取）
+      var period = STATE.activePeriod || "2026-08";
+      if (currentSelection && currentSelection.level2 && currentSelection.level2.length) {
+        // 只分析第一个选中 L2（不跨 L2 合并，第二界面类目筛选器保留全部所选）
+        var target = {
+          country: String(currentSelection.country || "泰国").trim(),
+          level1: String(currentSelection.level1 || "").trim(),
+          level2: String(currentSelection.level2[0] || "").trim(),
+          period: STATE.activePeriod || period,
+          top_n: 20
+        };
+        // 类目筛选器：展示所选 L2（真实数据源对应）
+        var cats = currentSelection.level2.map(function (l2) {
+          return currentSelection.level1 + " > " + l2;
+        });
+        el.categorySelect.innerHTML = cats.map(function (c) {
+          return '<option>' + esc(c) + '</option>';
+        }).join("");
+
+        // 跳转进入时：展示当前分析范围（不改变视觉结构，仅更新文案）
+        var scope = document.querySelector("#overview-title + p");
+        if (scope) {
+          var l2txt = (currentSelection.level2 || []).join("、");
+          scope.textContent = "基于 " + period + " 泰国站关键词数据，综合需求 / 转化 / 竞争三维评分｜" +
+            (currentSelection.country || "泰国") + " / " + currentSelection.level1 +
+            (l2txt ? " / " + l2txt : "");
+        }
+
+        // Loading 状态
+        el.oppGrid.innerHTML = '<div class="col-span-full rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">' +
+          '正在分析「' + esc(target.level1) + ' > ' + esc(target.level2) + '」真实数据…</div>';
+        el.listBody.innerHTML = '<tr><td colspan="9" class="px-4 py-10 text-center text-slate-400">正在分析…</td></tr>';
+        el.listCount.textContent = "正在分析…";
+
+        fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(target)
+        }).then(function (resp) { return resp.json(); }).then(function (data) {
+          if (!data || data.status === "empty") {
+            var msg = (data && data.message) || "该类目样本不足，暂不建议分析";
+            el.oppGrid.innerHTML = '<div class="col-span-full rounded-xl border border-amber-200 bg-amber-50 p-10 text-center">' +
+              '<div class="text-3xl mb-3">📊</div>' +
+              '<div class="text-base font-semibold text-amber-800 mb-2">该类目样本量过少</div>' +
+              '<div class="text-sm text-amber-700">' + esc(msg) + '</div>' +
+            '</div>';
+            el.listBody.innerHTML = '<tr><td colspan="9" class="px-4 py-10 text-center text-amber-600">' + esc(msg) + '</td></tr>';
+            el.listCount.textContent = "样本不足";
+            el.statGrid.innerHTML = "";
+            return;
+          }
+          if (data.status !== "success") {
+            var msg2 = (data && data.message) || "分析失败";
+            throw new Error(msg2);
+          }
+          STATE.cohortSize = (data.summary && data.summary.cohort_size) || 0;
+          STATE.summary = data.summary || {};
+          STATE.opportunities = (data.opportunities || []).map(normOpp);
+          renderOverview();
+          renderList();
+          updateSortArrows();
+          showView("overview");
+          if (STATE.opportunities.length === 0) {
+            showToast("该类目清洗/过滤后无可用机会");
+          }
+        }).catch(function (err) {
+          el.oppGrid.innerHTML = '<div class="col-span-full rounded-xl border border-red-200 bg-red-50 p-10 text-center text-red-600">' +
+            '⚠️ ' + esc(err.message || "分析请求失败") + '</div>';
+          el.listBody.innerHTML = '<tr><td colspan="9" class="px-4 py-10 text-center text-red-400">' + esc(err.message || "分析请求失败") + '</td></tr>';
+          el.listCount.textContent = "分析失败";
+          el.statGrid.innerHTML = "";
+        });
+      } else {
+        // 无跳转参数：显示引导
+        el.oppGrid.innerHTML = '<div class="col-span-full rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400">' +
+          '请从第一界面选择国家 / 一级类目 / 二级类目后进入分析。</div>';
+        renderList();
+        updateSortArrows();
+        showView("overview");
+      }
+      });
+    } catch (err) {
+      // 交互初始化失败时，保留静态骨架，仍可阅读
+      document.body.classList.add("bg-slate-50");
+    }
+  })();
+  </script>
+
+  <!-- 找货模态层 -->
+  <div id="finder-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div id="finder-body" class="overflow-y-auto p-6 sm:p-8"></div>
+    </div>
+  </div>
+
+</body>
+</html>

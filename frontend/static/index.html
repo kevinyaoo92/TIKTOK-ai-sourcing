@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<meta name="theme-color" content="#f9fafb">
+<title>泰国 TikTok 市场机会雷达</title>
+<link rel="icon" href="data:,">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="bg-[#f9fafb] min-h-screen">
+<header class="bg-white border-b border-gray-200">
+  <div class="max-w-3xl mx-auto px-6 py-5 flex items-baseline justify-between flex-wrap gap-y-1">
+    <h1 class="text-xl font-bold text-[#1e3a8a]">泰国 TikTok 市场机会雷达</h1>
+    <p class="text-sm text-gray-400">基于 TikTok 官方市场数据的 AI 选品分析</p>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+  <!-- 选择页：国家 -> 一级类目 -> 二级类目(多选) -> AI 选品分析 -->
+  <section id="view-selection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8" aria-labelledby="selection-title">
+    <div class="mb-6">
+      <h2 id="selection-title" class="text-lg font-semibold text-gray-900">选择分析类目</h2>
+      <p class="text-sm text-gray-500 mt-1">选择国家与类目，AI 将基于已保存的 TikTok 官方市场数据进行分析</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div class="field">
+        <label class="field-label" for="country-select">国家</label>
+        <div class="select-wrap">
+          <select id="country-select" class="select">
+            <option value="泰国" selected>泰国</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="level1-select">一级类目</label>
+        <div class="select-wrap">
+          <select id="level1-select" class="select" disabled>
+            <option value="">请选择一级类目</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field field-l2 sm:col-span-2">
+        <label class="field-label" for="level2-box">
+          二级类目
+          <span id="l2-count-hint" class="field-hint"></span>
+        </label>
+        <div id="level2-box" class="l2-box" aria-live="polite">
+          <div id="l2-empty" class="l2-empty">请先选择一级类目</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <p id="btn-hint" class="action-hint">请选择至少一个二级类目</p>
+      <button id="btn-analyze" class="btn-primary" type="button" disabled>AI 选品分析 →</button>
+    </div>
+  </section>
+
+  <!-- 占位页：点击 AI 选品分析后的过渡页 -->
+  <section id="view-analysis" class="placeholder bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8" hidden aria-labelledby="analysis-title">
+    <div class="mb-6">
+      <h2 id="analysis-title" class="text-lg font-semibold text-gray-900">正在准备市场机会分析</h2>
+      <p class="text-sm text-gray-500 mt-1">系统正在基于已保存的官方市场数据准备分析，后续版本将在这里展示分析结果</p>
+    </div>
+    <div class="selection-summary">
+      <div class="summary-row"><span class="summary-label">国家</span><span id="sum-country" class="summary-value">—</span></div>
+      <div class="summary-row"><span class="summary-label">一级类目</span><span id="sum-level1" class="summary-value">—</span></div>
+      <div class="summary-row"><span class="summary-label">二级类目</span><span id="sum-level2" class="summary-value">—</span></div>
+    </div>
+    <div class="actions">
+      <a class="btn-secondary" href="#/">返回重新选择</a>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f9fafb">
+<title>泰国 TikTok 市场机会雷达</title>
+<link rel="icon" href="data:,">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* 下拉框右侧箭头（不使用图片，纯 CSS） */
+  .select-arrow {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 16px;
+    padding-right: 40px;
+  }
+  /* 简洁滚动条 */
+  .l2-scroll::-webkit-scrollbar { width: 6px; }
+  .l2-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .l2-scroll::-webkit-scrollbar-track { background: transparent; }
+  /* 选中行浅蓝高亮（固定 class，避免运行时动态 arbitrary class 生成不可靠） */
+  .l2-selected { background: #eef2ff !important; }
+  .l2-selected:hover { background: #e0e7ff !important; }
+  /* Toast 动画 */
+  .toast-show { animation: toast-in 0.25s ease; }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+</style>
+</head>
+<body class="bg-[#f9fafb] min-h-screen">
+
+<!-- ================= 顶部标题栏 ================= -->
+<header class="bg-white border-b border-gray-200">
+  <div class="max-w-3xl mx-auto px-6 py-5 flex items-baseline justify-between flex-wrap gap-y-1">
+    <h1 class="text-xl font-bold text-[#1e3a8a]">泰国 TikTok 市场机会雷达</h1>
+    <p class="text-sm text-gray-400">基于 TikTok 官方市场数据的 AI 选品分析</p>
+  </div>
+</header>
+
+<!-- ================= 主卡片 ================= -->
+<main class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+  <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+
+    <!-- 卡片标题区 -->
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold text-gray-900">选择分析类目</h2>
+      <p class="text-sm text-gray-500 mt-1">选择国家与类目，AI 将基于已保存的 TikTok 官方市场数据进行分析</p>
+    </div>
+
+    <!-- 筛选区：桌面两列 / 移动单列 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+      <!-- 左列：国家 -->
+      <div>
+        <label for="country-select" class="block text-sm font-medium text-gray-800 mb-2">国家</label>
+        <select id="country-select" class="select-arrow w-full h-11 bg-white border border-gray-200 rounded-lg px-3 text-sm text-gray-800 focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/15 cursor-pointer">
+          <option value="泰国" selected>泰国</option>
+        </select>
+      </div>
+
+      <!-- 右列：一级类目 -->
+      <div>
+        <label for="level1-select" class="block text-sm font-medium text-gray-800 mb-2">一级类目</label>
+        <select id="level1-select" class="select-arrow w-full h-11 bg-white border border-gray-200 rounded-lg px-3 text-sm text-gray-800 focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/15 cursor-pointer">
+        </select>
+      </div>
+
+      <!-- 二级类目区（占满两列） -->
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-gray-800 mb-2">
+          二级类目
+          <span id="l2-hint" class="ml-1 text-xs font-normal text-gray-400"></span>
+        </label>
+        <div id="l2-box" class="l2-scroll max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-lg"></div>
+      </div>
+    </div>
+
+    <!-- 底部操作区 -->
+    <div class="mt-7 flex items-center justify-between gap-4 flex-wrap">
+      <p id="btn-hint" class="text-sm text-gray-400">请选择至少一个二级类目</p>
+      <button id="btn-analyze" type="button" disabled
+        class="px-6 py-2.5 rounded-lg bg-[#1e3a8a] text-white text-sm font-medium hover:bg-[#152c6b] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300">
+        AI 选品分析 →
+      </button>
+    </div>
+  </section>
+</main>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed left-1/2 bottom-10 -translate-x-1/2 bg-gray-800 text-white text-sm px-5 py-2.5 rounded-lg shadow-lg z-50"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- 类目数据 ----------------
+     默认从真实接口 /api/categories 加载官方类目（30 L1 / 215 L2）。
+     以下 categoryData 仅在接口不可用时作为兜底展示，绝不覆盖真实数据。 */
+  var categoryData = {
+    "图书、杂志和音频": [
+      "人文社科", "杂志与报纸", "文学与艺术", "经济与管理",
+      "儿童与婴幼儿图书", "科技", "教育考试", "生活休闲", "动漫绘本"
+    ],
+    "美妆个护": ["美妆", "护肤", "个人护理", "香水", "美妆工具"],
+    "家居用品": ["家居收纳", "厨房用品", "家纺", "家具", "清洁用品"],
+    "时尚配件": ["饰品", "箱包", "腰带", "帽子", "眼镜"]
+  };
+  var CATALOG = null;   // 真实 /api/categories 返回
+
+  var MAX_L2 = 2;  // 演示版沿用单次最多选择 2 个二级类目
+
+  var elCountry = document.getElementById("country-select");
+  var elLevel1 = document.getElementById("level1-select");
+  var elL2Box = document.getElementById("l2-box");
+  var elL2Hint = document.getElementById("l2-hint");
+  var elBtnHint = document.getElementById("btn-hint");
+  var elBtn = document.getElementById("btn-analyze");
+  var elToast = document.getElementById("toast");
+  var selectedL2 = [];
+  var toastTimer = null;
+
+  /* ---------------- Toast ---------------- */
+  function showToast(msg) {
+    elToast.textContent = msg;
+    elToast.classList.remove("hidden");
+    elToast.classList.remove("toast-show");
+    void elToast.offsetWidth;               // 重新触发动画
+    elToast.classList.add("toast-show");
+    if (toastTimer) window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      elToast.classList.add("hidden");
+    }, 2600);
+  }
+
+  /* ---------------- 一级类目加载 ---------------- */
+  function fillLevel1(defaultName) {
+    elLevel1.innerHTML = "";
+    var names = CATALOG ? CATALOG.level1.map(function (item) { return item.name; })
+                        : Object.keys(categoryData);
+    names.forEach(function (name) {
+      var opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      elLevel1.appendChild(opt);
+    });
+    if (defaultName && names.indexOf(defaultName) !== -1) {
+      elLevel1.value = defaultName;
+    }
+  }
+
+  /* ---------------- 二级类目渲染 ---------------- */
+  function renderL2() {
+    selectedL2 = [];
+    elL2Hint.textContent = "";
+    elL2Box.innerHTML = "";
+
+    var l1 = elLevel1.value;
+    var l2List = [];
+    if (CATALOG) {
+      for (var i = 0; i < CATALOG.level1.length; i++) {
+        if (CATALOG.level1[i].name === l1) { l2List = CATALOG.level1[i].level2 || []; break; }
+      }
+    } else {
+      l2List = categoryData[l1] || [];
+    }
+
+    l2List.forEach(function (name) {
+      var label = document.createElement("label");
+      label.className = "l2-item flex items-center gap-3 py-3 px-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition-colors";
+      label.dataset.name = name;
+
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = name;
+      cb.className = "w-4 h-4 accent-[#1e3a8a] cursor-pointer flex-none";
+      // change 是唯一驱动：label 包含 input，点击行文本会由浏览器转发为 checkbox 点击，
+      // 与直接点 checkbox 一样只触发一次 change，避免 click 双绑定重复翻转。
+      cb.addEventListener("change", function () {
+        toggleL2(name, cb.checked);
+      });
+
+      var span = document.createElement("span");
+      span.className = "text-sm text-gray-700 select-none";
+      span.textContent = name;
+
+      label.appendChild(cb);
+      label.appendChild(span);
+
+      elL2Box.appendChild(label);
+    });
+
+    updateBtnState();
+  }
+
+  /* ---------------- 多选逻辑（最多 2 个） ---------------- */
+  function refreshDisabled() {
+    var atLimit = selectedL2.length >= MAX_L2;
+    var items = elL2Box.querySelectorAll(".l2-item");
+    for (var i = 0; i < items.length; i++) {
+      var cb = items[i].querySelector("input[type=checkbox]");
+      var selected = selectedL2.indexOf(cb.value) !== -1;
+      var disabled = atLimit && !selected;
+      cb.disabled = disabled;
+      items[i].classList.toggle("opacity-50", disabled);
+      items[i].classList.toggle("l2-selected", selected);   // 选中行浅蓝高亮
+    }
+  }
+
+  function toggleL2(name, checked) {
+    if (checked && selectedL2.length >= MAX_L2 && selectedL2.indexOf(name) === -1) {
+      var items = elL2Box.querySelectorAll(".l2-item");
+      for (var i = 0; i < items.length; i++) {
+        var c = items[i].querySelector("input[type=checkbox]");
+        if (c.value === name) { c.checked = false; break; }
+      }
+      showToast("单次最多选择 2 个二级类目");
+      return;
+    }
+    var idx = selectedL2.indexOf(name);
+    if (checked && idx === -1) selectedL2.push(name);
+    if (!checked && idx !== -1) selectedL2.splice(idx, 1);
+    refreshDisabled();
+    updateBtnState();
+  }
+
+  /* ---------------- 按钮与提示状态 ---------------- */
+  function updateBtnState() {
+    var ready = selectedL2.length > 0;
+    elBtn.disabled = !ready;
+    if (!ready) {
+      elBtnHint.textContent = "请选择至少一个二级类目";
+      elL2Hint.textContent = "";
+    } else if (selectedL2.length >= MAX_L2) {
+      elBtnHint.textContent = "";
+      elL2Hint.textContent = "已选择 " + selectedL2.length + " 个二级类目（单次最多 2 个）";
+    } else {
+      elBtnHint.textContent = "";
+      elL2Hint.textContent = "已选择 " + selectedL2.length + " 个二级类目";
+    }
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  elLevel1.addEventListener("change", function () {
+    renderL2();   // 切换一级类目 → 二级列表重新加载，已选清空
+  });
+
+  elBtn.addEventListener("click", function () {
+    if (selectedL2.length === 0) {
+      showToast("请选择至少一个二级类目");
+      return;
+    }
+    showToast("正在分析，请稍候...");
+    console.log("=== AI 选品分析参数 ===");
+    console.log("国家:", elCountry.value);
+    console.log("一级类目:", elLevel1.value);
+    console.log("二级类目:", selectedL2.slice());
+  });
+
+  /* ---------------- 初始化：真实类目优先，默认选中「图书、杂志和音频」 ---------------- */
+  function init() {
+    fillLevel1("图书、杂志和音频");
+    renderL2();
+
+    fetch("/api/categories?market=TH", { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data || !data.level1 || data.level1.length === 0) {
+          throw new Error("类目数据为空");
+        }
+        CATALOG = data;
+        fillLevel1("图书、杂志和音频");   // 真实 30 L1 / 215 L2 覆盖兜底
+        renderL2();
+      })
+      .catch(function (err) {
+        showToast("真实类目加载失败，展示内置兜底：" + err.message);
+      });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
