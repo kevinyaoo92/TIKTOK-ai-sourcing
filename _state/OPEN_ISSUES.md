@@ -240,3 +240,49 @@ Copy-Item "_state\opportunity.STABLE_XXX.html" "frontend\static\opportunity.html
 - 妙手采集稳定性验证
 - Git 首次提交
 - 清理项目根目录临时脚本
+
+
+## Git 提醒规则（2026-10-04 15:52 建立）
+
+Git 已配置完成。仓库：https://github.com/kevinyaoo92/TIKTOK-ai-sourcing
+
+### 关键节点必须提醒用户 commit + push
+
+以下节点完成后，我主动提醒用户执行：
+```
+cd D:\tiktok-ai-sourcing
+git add -A
+git commit -m "描述"
+git push
+```
+
+触发条件：
+1. 每次改完代码、测试通过后
+2. 月度数据更新完成后
+3. 大功能模块完成时
+4. 部署上云前
+5. 备案通过后
+6. 数据库冻结前后（数据库单独备份，代码进 Git）
+
+不提醒：只改临时脚本、只改数据文件、只做诊断。
+
+
+## 今日收尾（2026-10-04 15:58）
+
+### 完成事项
+1. 9月数据全量上线：keyword_metric 28014 行 / opportunity_analysis 2493 条 / 161 个 L2 有数据
+2. active_period 已切到 2026-09，前端验证 3 个类目正常
+3. 妙手采集端到端验证 3/3 成功（女装/美妆/宠粮）
+4. 搜索词优化：前端改用 name 全称（不截断斜杠）；加地域词过滤
+5. 妙手登录检测改为只读 Cookie，不打开页面
+6. 妙手采集页删除所有主动检测逻辑（不点采集不弹妙手页）
+7. ICP 备案已提交（订单号 30179108639935234），等腾讯云初审电话
+8. Git 配置完成 + 首次提交 + 推 GitHub（bd1442c）
+
+### 待用户处理
+- 保持两个手机号开机，接听 010 开头电话（腾讯云初审，1-2 工作日）
+- 收到腾讯云幕布后，法人本人拍照上传
+- 管局审核 7-10 工作日（陕西）
+
+### 下次会话开场
+读 `D:\tiktok-ai-sourcing\_state\OPEN_ISSUES.md`

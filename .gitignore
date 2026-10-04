@@ -60,3 +60,5 @@ database/
 
 *.broken_*
 
+/fix.py
+_state/*.png
