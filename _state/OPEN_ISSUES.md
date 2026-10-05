@@ -1,36 +1,31 @@
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 20260929_170123
+最后更新: 2026-10-05 20:30
 项目根: D:\tiktok-ai-sourcing
 
-## P0 数据与月度更新
-1. 9月数据采集 SOP 未实战：脚本参数、period 切换、中间文件路径、备份时机、失败回退。
-2. keyword_metric 里 19 个缺失 L2 是否有数据，未查。
-3. 2522 vs 3568 口径未对齐。
-4. ai_analysis_log 7310 行 vs opportunity_analysis 2522 行，差异原因未查。
+## P0 — 当前阻塞
+1. ICP 备案审核中：腾讯云初审 + 陕西管局审核（7-10 工作日），等 010 电话 + 幕布拍照。
+2. 域名解析 + HTTPS：等备案通过后做。
+3. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
 
-## P0 代码真实状态
-5. supplier_finder.py 是完整实现还是 stub，未查。
-6. SKU 深度库存检查后端是否存在 _check_sku_stock_deep，未查。
-7. opportunity.html 的 bak_finder / bak_skudims 对应功能状态，未查。
-8. 查清前，不要点"去找货"按钮。
+## P1 — 待办
+1. 撤除 Basic Auth（域名 + HTTPS 上线后）。
+2. 妙手集成方式确认：当前用 Playwright 走链接采集，Phase 3 才拆到 Chrome 扩展。
+3. 项目卫生：C 盘空壳 tiktok-audit、云盘副本、opportunity.html.bak_* 备份清理。
 
-## P1 商业化阻塞
-9. 营业执照经营范围变更 -> ICP 备案。
-10. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
-11. 妙手集成：插件 vs API，未定。
-12. 用户系统 + 免费 5 次，未开发。
-13. 部署上云、域名解析、HTTPS，未开始。
+## P2 — 长期
+1. 评分体系回测，无成交数据。
+2. featurePair 类目映射表（解决"女士连衣裙搜出童装"类问题）。
+3. 多国家扩展（TH / VN / MY / PH / ID）。
 
-## P1 项目卫生
-14. C 盘空壳 tiktok-audit 和云盘副本如何处理。
-15. opportunity.html.bak_* 20+ 个备份文件清理。
-16. Git 配置、临时脚本清理。
-17. 评分体系回测，无成交数据。
-
-## 待用户提供
-18. DeepSeek API key 位置。
-19. 官方类目 TXT 位置。
-20. 1688 五项指标位置（找货功能前置）。
+## 历史已解决（归档，仅留痕）
+- 9月数据采集 SOP：已全量上线（28014 关键词 / 2493 机会 / 161 L2）。
+- 19 个缺失 L2：已确认数据源本身少（cohort < 3）。
+- supplier_finder.py：已完整实现，弹窗返回货源。
+- SKU 深度库存检查 `_check_sku_stock_deep`：20261001_114414 SKU 闭环完成。
+- opportunity.html bak_finder / bak_skudims：端到端已通过。
+- "不要点去找货按钮"：已放行，Phase 1 端到端验收通过。
+- 用户系统 + 免费额度：已完成，find 10 / collect 5，UUID 计数。
+- 部署上云：已完成（CVM 118.89.85.175，systemd，Nginx 反代）。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。
@@ -41,7 +36,7 @@
 ## 已确认事实（防止重复排查）
 - 唯一活跃项目: D:\tiktok-ai-sourcing
 - 主库: data\tiktok_market.db, 45.86MB, integrity ok
-- 7 张表齐全, category 181 行, keyword_metric 27954 行
+- 7 张表齐全, category 182 行, keyword_metric 28014 行
 - 10 个历史备份在 data\, 9/22-9/28 时间线完整
 - 前端端口 8123, 已跑通
 - Chrome profile: .chrome_1688, CDP 9222 已验证
@@ -57,11 +52,6 @@
 - 3+ 字段：按 2 字段处理，标记 dimension_count>=3，忽略第三维度
 - 不考虑误杀，命中即停
 - 评分体系 V1 冻结: Score = 100*(0.40*Demand+0.35*Conversion+0.25*Competition)
-
-## 未解决问题汇总（按优先级）
-P0: 9月采集 SOP / 19 缺失 L2 / supplier_finder 状态 / SKU 代码状态
-P1: ICP 备案 / 数据合规 / 妙手 / 用户系统 / 部署
-P2: 项目卫生 / 备份清理 / Git
 
 ## SKU 闭环完成（20261001_114414）
 
