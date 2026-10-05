@@ -1,50 +1,48 @@
 # 当前任务（进度存根）
 
-最后更新: 2026-10-05 15:17
+最后更新: 2026-10-05 17:20
 
 ## 这次会话完成
 
-- 服务器已购并 SSH 登录成功（Ubuntu 22.04.5，IP 118.89.85.175）
-- 服务器已装：python3-pip / python3-venv / git / nginx
-- Git 已配置 + 首次提交推 GitHub（bd1442c）
-- 9 月数据完整上线（28014 行关键词，2493 条机会）
-- 妙手采集端到端验证 3/3 成功
-- 搜索词优化（name 全称 + 地区词过滤）
-- ICP 备案已提交，等腾讯云初审电话
-- 产品路线 + Phase 1 规格文档化
+- 服务器 Phase 1 部署完成
+- 后端服务通过 systemd 稳定运行（frontharbor.service）
+- 监听 0.0.0.0:8123，外网可访问
+- 类目 TXT 通过环境变量 TIKTOK_CATEGORY_FILE 指向正确路径
+- 浏览器访问 http://118.89.85.175:8123 全部功能正常
 
 ## 下一步
 
-- 服务器上装 Python 依赖（从 requirements.txt）
-- 上传 tiktok_market.db（45.86MB）到服务器
-- 部署后端服务（systemd 守护）
-- 部署前端服务
-- Nginx 反代配置
+- Nginx 反代（80 → 8123），去掉端口号访问
+- 加基础访问限制（防止数据被公开抓取）
 - 开发用户系统（匿名 UUID + 额度计数）
+- 开发免费额度逻辑（找货 10 次 / 采集 5 次）
+- 开发找货按钮占位
 
-## 未完成任务清单（从 PHASE1_SPEC.md 同步）
+## 服务器状态
+
+- IP: 118.89.85.175
+- 实例 ID: ins-2zuo8hib
+- 服务: frontharbor.service (systemd, 自动重启)
+- 监听: 0.0.0.0:8123
+- 类目文件: /home/ubuntu/frontharbor/app/app/data/泰国TK官方类目.txt
+- systemd override: /etc/systemd/system/frontharbor.service.d/override.conf
+- 前端访问: http://118.89.85.175:8123
+
+## 未完成任务清单
 
 - [x] SSH 登录服务器
 - [x] 服务器初始化
-- [ ] 数据库上传
-- [ ] 后端部署
-- [ ] 前端部署
+- [x] 数据库上传
+- [x] 后端部署
+- [x] 前端部署（静态文件可访问）
 - [ ] Nginx 反代
+- [ ] 访问控制（用户系统上线前先挡外网）
 - [ ] 域名解析（等备案）
 - [ ] HTTPS（等备案）
 - [ ] 用户系统
 - [ ] 免费额度
 - [ ] 找货占位
 - [ ] 端到端测试
-
-## 服务器信息
-
-- IP: 118.89.85.175
-- 实例 ID: ins-2zuo8hib
-- 系统: Ubuntu 22.04.5 LTS
-- Python: 3.10.12
-- 磁盘: 20G，剩 15G
-- 内存: 3.6G
 
 ## 新会话开场白
 
@@ -54,4 +52,4 @@
 - _state/PRODUCT_ROADMAP.md
 - _state/PHASE1_SPEC.md
 
-读完直接：复述进度  列下一步  开始执行。
+读完直接：复述进度 → 列下一步 → 开始执行。
