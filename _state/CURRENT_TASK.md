@@ -54,3 +54,24 @@
 - _state/PHASE1_SPEC.md
 
 读完直接：复述进度 → 列下一步 → 开始执行。
+---
+
+## 自动快照 2026-10-05 18:10
+
+### 最近 10 次提交
+47de16d Phase 1: 鐢ㄦ埛棰濆害鍚庣锛坒ind 10 / collect 5锛孶UID 璁℃暟锛?d5e9b5f init_user_usage 鏀寔 --db 鍙傛暟
+1f77418 Phase 1: 鍔?user_usage 寤鸿〃鑴氭湰
+6a6d725 Phase 1: Nginx 鍙嶄唬 + Basic Auth 瀹屾垚 2026-10-05 17:29
+11c465f Phase 1: 鏈嶅姟鍣ㄩ儴缃插畬鎴?2026-10-05 17:20
+30e6781 杩涘害瀛樻牴鏇存柊 2026-10-05 15:17
+20777d7 鏀跺熬锛氭洿鏂?OPEN_ISSUES.md 璁板綍浠婃棩鏈€缁堢姸鎬?bd1442c 棣栨鎻愪氦锛?鏈堟暟鎹笂绾匡紝濡欐墜閲囬泦闂幆锛屽妗堝凡鎻愪氦
+
+### 当前未提交的修改
+ M frontend/static/opportunity.html
+
+### 恢复指引
+新会话开场读以下文件接上：
+- _state/CURRENT_TASK.md
+- _state/OPEN_ISSUES.md
+- _state/PRODUCT_ROADMAP.md
+- _state/PHASE1_SPEC.md

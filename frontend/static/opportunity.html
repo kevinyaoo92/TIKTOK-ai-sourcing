@@ -487,6 +487,26 @@
 
     /* ---------------------------------------------------------- 找货模态 */
     var FINDER = { taskId: null, timer: null, currentOppId: null };
+    function getUUID() {
+      var KEY = "frontharbor_uuid";
+      var v = localStorage.getItem(KEY);
+      if (v) return v;
+      var m = document.cookie.match(/(^|; )frontharbor_uuid=([^;]+)/);
+      if (m) {
+        v = decodeURIComponent(m[2]);
+        localStorage.setItem(KEY, v);
+        return v;
+      }
+      if (window.crypto && crypto.randomUUID) {
+        v = crypto.randomUUID();
+      } else {
+        v = "u-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+      }
+      localStorage.setItem(KEY, v);
+      document.cookie = "frontharbor_uuid=" + encodeURIComponent(v) + "; max-age=" + (365*24*3600) + "; path=/";
+      return v;
+    }
+
     var MS_COLLECTED = {};
     var MS_LOGIN_STATE = "unknown";
 
@@ -722,8 +742,13 @@
       fetch("/api/find_suppliers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: kw })
+        body: JSON.stringify({ keyword: kw, uuid: getUUID() })
       }).then(function (r) { return r.json(); }).then(function (data) {
+        if (data && data.status === "quota_exceeded") {
+          var q = data.quota || {};
+          renderFinderError("免费找货次数已用完（" + (q.used||0) + "/" + (q.limit||0) + "）。升级付费后可继续使用。");
+          return;
+        }
         if (!data || data.status !== "ok") {
           renderFinderError("任务创建失败");
           return;
@@ -1001,8 +1026,15 @@
         fetch("/api/miaoshou_collect", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({offer_id: oid})
+          body: JSON.stringify({offer_id: oid, uuid: getUUID()})
         }).then(function(r){ return r.json(); }).then(function(data){
+          if (data && data.status === "quota_exceeded") {
+            us.disabled = false;
+            us.textContent = "妙手采集";
+            var q = data.quota || {};
+            alert("免费采集次数已用完（" + (q.used||0) + "/" + (q.limit||0) + "）。升级付费后可继续使用。");
+            return;
+          }
           if (data.status === "success") {
             MS_COLLECTED[oid] = true;
             us.textContent = "已采集";
