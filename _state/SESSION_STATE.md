@@ -1,7 +1,43 @@
-# SESSION STATE — 2026-10-05 19:55
+# AI 职责清单（每次新会话必读，必须遵守）
+
+## 一、开场动作
+1. 读完本文件后，先复述当前进度（一段话）
+2. 列出下一步动作
+3. 从下一步动作开始执行
+4. 不要问废话、不要假装已读、不要猜
+
+## 二、工作规则
+- 分析采用：反方 → 支持方 → 中立裁判
+- 不猜、不装懂、要证据
+- 改代码前先 Select-String 确认锚点唯一
+- 改代码用 Python 脚本改文件（read_text/replace/write_text），不用 PowerShell 多行替换
+- 判断"是否已插入"用锚点上下文，不用全文 in
+- 改完立刻 grep 验证 + 重启 + 测接口
+
+## 三、任务结束前【AI 必须主动提醒用户】
+任务即将结束时，AI 必须主动、明确地提醒用户执行以下四步，
+不要说"你可以考虑"，要直接说"现在请执行"：
+  1. 跑 python _state\make_session_report.py 生成最新快照
+  2. 更新 _state/CURRENT_TASK.md（本次进度）
+  3. 更新 _state/OPEN_ISSUES.md（新问题/已解决问题）
+  4. git add -A && git commit -m "..." && git push
+
+如果用户说"结束了"、"收尾"、"下次继续"、"先这样"等类似结束信号，
+AI 必须立刻主动提出上述四步，不能等用户问。
+
+## 四、开场提示词模板（用户下次直接复制）
+读 D:\tiktok-ai-sourcing\_state\SESSION_STATE.md
+读完直接：复述进度 → 列下一步 → 从下一步开始执行。
+规则：反方 → 支持方 → 中立裁判；不猜、不装懂、要证据；
+改代码前先确认锚点；每关键节点更新 CURRENT_TASK.md 并提醒我 commit + push。
+
+---
+
+# SESSION STATE — 2026-10-05 20:02
 ## 1. Git
 
 ```
+1809c3a Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
 a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
 61c1a59 Phase 1: 修复 find_suppliers 成功后未自动刷新额度 + 记录 WORK_ERRORS
 590cc99 Phase 1: 清理临时文件 + PHASE1_SPEC 勾选进度
@@ -11,13 +47,12 @@ a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
 d5e9b5f init_user_usage 支持 --db 参数
 1f77418 Phase 1: 加 user_usage 建表脚本
 6a6d725 Phase 1: Nginx 反代 + Basic Auth 完成 2026-10-05 17:29
-11c465f Phase 1: 服务器部署完成 2026-10-05 17:20
 
 ---
-?? _state/make_session_report.py
+ M _state/make_session_report.py
 
 ---
-* main a1c9922 [origin/main] Phase 1: 端到端验收通过 + 状态文件同步
+* main 1809c3a [origin/main] Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
 
 ```
 ## 2. 数据库
@@ -629,6 +664,6 @@ user_usage.py : app/user_usage.py
 DB            : data/tiktok_market.db
 ```
 
-## 5. 新会话开场提示
+## 5. 本次快照生成时间
 
-读 SESSION_STATE.md，然后：复述进度 → 列下一步 → 直接执行。
+2026-10-05 20:02:05
