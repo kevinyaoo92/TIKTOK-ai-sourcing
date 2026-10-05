@@ -773,6 +773,7 @@
           renderFinderError("任务创建失败");
           return;
         }
+        refreshQuota();
         FINDER.taskId = data.task_id;
         FINDER.timer = setInterval(pollFinderTask, 800);
       }).catch(function (e) {
