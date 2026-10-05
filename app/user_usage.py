@@ -79,3 +79,27 @@ def check_and_decrement(db_path: Path, uuid: str, action: str) -> dict:
                 "remaining": limit - used_new}
     finally:
         con.close()
+
+def get_usage(db_path: Path, uuid: str) -> dict:
+    """只查不减。返回 {ok, find:{used,limit,remaining}, collect:{used,limit,remaining}}。"""
+    if not uuid:
+        return {"ok": False, "reason": "missing_uuid"}
+    ensure_schema(db_path)
+    con = sqlite3.connect(str(db_path))
+    try:
+        cur = con.cursor()
+        result = {"ok": True, "find": {}, "collect": {}}
+        for action, limit in QUOTA.items():
+            row = cur.execute(
+                "SELECT count FROM user_usage WHERE uuid=? AND action=?",
+                (uuid, action),
+            ).fetchone()
+            used = int(row[0]) if row else 0
+            result[action] = {
+                "used": used,
+                "limit": limit,
+                "remaining": max(0, limit - used),
+            }
+        return result
+    finally:
+        con.close()

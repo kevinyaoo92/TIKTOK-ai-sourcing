@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """产品前端 Web 服务（零第三方依赖：标准库 http.server + sqlite3）。
 
 - 静态页面: frontend/static/*
@@ -361,6 +361,11 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/find_suppliers/status":
                 task_id = qs.get("task_id", [""])[0]
                 return self._json(api_find_suppliers_status(task_id))
+            if path == "/api/usage":
+                uuid_str = (qs.get("uuid") or [""])[0].strip()
+                if not uuid_str:
+                    return self._json({"status": "error", "error": "missing_uuid"}, 400)
+                return self._json(user_usage.get_usage(MARKET_DB, uuid_str))
             if path == "/api/active_period":
                 con = sqlite3.connect(str(MARKET_DB))
                 cur = con.cursor()
@@ -381,6 +386,7 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         try:
+
             if path == "/api/analyze":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"

@@ -94,6 +94,9 @@
         </div>
       </div>
     </div>
+      <div class="max-w-7xl mx-auto px-4 pb-2">
+        <div id="quota-bar" class="text-xs text-white/70"></div>
+      </div>
   </header>
 
   <main id="app" class="max-w-7xl mx-auto">
@@ -507,6 +510,23 @@
       return v;
     }
 
+    function refreshQuota() {
+      fetch("/api/usage?uuid=" + encodeURIComponent(getUUID()))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok) return;
+          var el = document.getElementById("quota-bar");
+          if (el) {
+            el.textContent = "找货剩余 " + d.find.remaining + "/" + d.find.limit +
+                             "  ·  采集剩余 " + d.collect.remaining + "/" + d.collect.limit;
+          }
+        });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", refreshQuota);
+    } else {
+      refreshQuota();
+    }
     var MS_COLLECTED = {};
     var MS_LOGIN_STATE = "unknown";
 
@@ -1036,6 +1056,7 @@
             return;
           }
           if (data.status === "success") {
+            refreshQuota();
             MS_COLLECTED[oid] = true;
             us.textContent = "已采集";
             us.disabled = true;
