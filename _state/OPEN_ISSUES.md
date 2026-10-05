@@ -286,3 +286,50 @@ git push
 
 ### 下次会话开场
 读 `D:\tiktok-ai-sourcing\_state\OPEN_ISSUES.md`
+
+
+## 路线与规格已冻结（2026-10-05 14:58）
+
+- 产品路线：_state/PRODUCT_ROADMAP.md
+- Phase 1 规格：_state/PHASE1_SPEC.md
+- 当前阶段：Phase 1 开工，从服务器初始化开始
+
+
+## 状态文件维护规则（2026-10-05 15:02 建立）
+
+AI 助手必须主动维护以下文件，不等用户提醒：
+
+### 每次关键节点后主动更新
+1. CURRENT_TASK.md —— 当前在哪一步、下一步做什么、未完成任务
+2. OPEN_ISSUES.md —— 已完成、新发现的问题、待办
+3. PRODUCT_ROADMAP.md —— 路线是否变化
+4. PHASE1_SPEC.md —— Phase 1 参数是否变化
+
+### 关键节点定义
+- 每完成一个可交付动作（部署完成、功能开发完成、测试通过）
+- 每次会话即将结束
+- 每次用户确认新的决策
+- 每次发现新的风险
+
+### 主动提醒方式
+在关键节点后，AI 主动说：
+「[状态更新] 刚才完成了 XXX，已更新 CURRENT_TASK.md，下一步是 YYY。」
+不需要用户问。
+
+### 跨会话接续标准
+新会话开场，用户只需说：
+「读 D:\tiktok-ai-sourcing\_state\CURRENT_TASK.md」
+AI 读完后应能：
+1. 复述当前进度
+2. 列出下一步动作
+3. 直接继续，不问废话
+
+### 文件清单（新会话必须能一次读全）
+- OPEN_ISSUES.md（总入口）
+- PRODUCT_ROADMAP.md
+- PHASE1_SPEC.md
+- CURRENT_TASK.md（最常更新）
+- MONTHLY_UPDATE_SOP.md
+- ANALYSIS_SOP.md
+- FINDER_RULES.md
+- WORK_ERRORS.md
