@@ -99,3 +99,31 @@
 - [ ] PHASE1_SPEC.md 任务状态同步勾选
 - [ ] OPEN_ISSUES.md 头部 P0 清理
 - [ ] 域名解析 + HTTPS（等备案）
+
+
+## Phase 1 端到端验收通过 2026-10-05 18:59
+
+### 已验收
+- 打开站点 → 选类目 → 看机会列表 → 点详情 → 看 1688 搜索词：通过
+- 点「去找1688货源」→ 弹窗返回货源：通过
+- 关闭弹窗 → 额度自动 10→9：通过
+- 额度耗尽 → 显示"免费找货次数已用完（10/10）。升级付费后可继续使用"：通过
+- 后端扣减逻辑单测：find 第 11 次拒绝，collect 第 6 次拒绝
+- get_usage 返回 used/limit/remaining 正确
+
+### 本次提交
+- 3428828 额度查询接口 + 前端额度显示
+- 590cc99 清理临时文件 + PHASE1_SPEC 勾选进度
+- 61c1a59 修复 find_suppliers 成功后未自动刷新额度 + WORK_ERRORS
+
+### Phase 1 剩余
+- [ ] 域名解析（等备案）
+- [ ] HTTPS（等备案）
+- [ ] 备案通过后部署到正式域名
+
+### 下一次会话开场
+读以下文件接上：
+- _state/CURRENT_TASK.md
+- _state/OPEN_ISSUES.md
+- _state/PRODUCT_ROADMAP.md
+- _state/PHASE1_SPEC.md
