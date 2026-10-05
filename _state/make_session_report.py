@@ -28,10 +28,12 @@ AI_RULES = """# AI 职责清单（每次新会话必读，必须遵守）
 ## 三、任务结束前【AI 必须主动提醒用户】
 任务即将结束时，AI 必须主动、明确地提醒用户执行以下四步，
 不要说"你可以考虑"，要直接说"现在请执行"：
+  0. 【先确认 VPN 已连接】——推 GitHub 必须先连 VPN，否则 push 会失败
   1. 跑 python _state\make_session_report.py 生成最新快照
   2. 更新 _state/CURRENT_TASK.md（本次进度）
   3. 更新 _state/OPEN_ISSUES.md（新问题/已解决问题）
   4. git add -A && git commit -m "..." && git push
+  （如 push 失败：先确认 VPN 是否连接，再 git config http.version HTTP/1.1 重试）
 
 如果用户说"结束了"、"收尾"、"下次继续"、"先这样"等类似结束信号，
 AI 必须立刻主动提出上述四步，不能等用户问。

@@ -17,10 +17,12 @@
 ## 三、任务结束前【AI 必须主动提醒用户】
 任务即将结束时，AI 必须主动、明确地提醒用户执行以下四步，
 不要说"你可以考虑"，要直接说"现在请执行"：
+  0. 【先确认 VPN 已连接】——推 GitHub 必须先连 VPN，否则 push 会失败
   1. 跑 python _state\make_session_report.py 生成最新快照
   2. 更新 _state/CURRENT_TASK.md（本次进度）
   3. 更新 _state/OPEN_ISSUES.md（新问题/已解决问题）
   4. git add -A && git commit -m "..." && git push
+  （如 push 失败：先确认 VPN 是否连接，再 git config http.version HTTP/1.1 重试）
 
 如果用户说"结束了"、"收尾"、"下次继续"、"先这样"等类似结束信号，
 AI 必须立刻主动提出上述四步，不能等用户问。
@@ -33,10 +35,11 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-05 20:02
+# SESSION STATE — 2026-10-05 20:07
 ## 1. Git
 
 ```
+f687e31 Phase 1: SESSION_STATE 加入 AI 职责清单，规定任务结束必须主动提醒收尾
 1809c3a Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
 a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
 61c1a59 Phase 1: 修复 find_suppliers 成功后未自动刷新额度 + 记录 WORK_ERRORS
@@ -46,13 +49,12 @@ a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
 47de16d Phase 1: 用户额度后端（find 10 / collect 5，UUID 计数）
 d5e9b5f init_user_usage 支持 --db 参数
 1f77418 Phase 1: 加 user_usage 建表脚本
-6a6d725 Phase 1: Nginx 反代 + Basic Auth 完成 2026-10-05 17:29
 
 ---
  M _state/make_session_report.py
 
 ---
-* main 1809c3a [origin/main] Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
+* main f687e31 [origin/main] Phase 1: SESSION_STATE 加入 AI 职责清单，规定任务结束必须主动提醒收尾
 
 ```
 ## 2. 数据库
@@ -666,4 +668,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-05 20:02:05
+2026-10-05 20:07:33
