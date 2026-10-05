@@ -39,6 +39,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.category_loader import load_catalog  # noqa: E402
 from app.analysis import analyze_service  # noqa: E402
 from app.analysis import supplier_finder  # noqa: E402
+from app import user_usage  # noqa: E402
 import threading  # noqa: E402
 import uuid  # noqa: E402
 import time  # noqa: E402
@@ -396,8 +397,16 @@ class Handler(BaseHTTPRequestHandler):
                     body = json.loads(raw.decode("utf-8") or "{}")
                 except json.JSONDecodeError:
                     return self._json({"status": "error", "error": "bad_json"}, 400)
+                uuid_str = (body.get("uuid") or "").strip()
+                if not uuid_str:
+                    return self._json({"status": "error", "error": "missing_uuid"}, 400)
+                q = user_usage.check_and_decrement(MARKET_DB, uuid_str, "find")
+                if not q.get("ok"):
+                    return self._json({"status": "quota_exceeded", "quota": q}, 403)
                 _cleanup_finder_tasks()
-                return self._json(api_find_suppliers(body))
+                resp = api_find_suppliers(body)
+                resp["quota"] = q
+                return self._json(resp)
             if path == "/api/miaoshou_collect":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"
@@ -408,8 +417,16 @@ class Handler(BaseHTTPRequestHandler):
                 offer_id = (body.get("offer_id") or "").strip()
                 if not offer_id:
                     return self._json({"status": "failed", "message": "missing offer_id"}, 400)
+                uuid_str = (body.get("uuid") or "").strip()
+                if not uuid_str:
+                    return self._json({"status": "error", "error": "missing_uuid"}, 400)
+                q = user_usage.check_and_decrement(MARKET_DB, uuid_str, "collect")
+                if not q.get("ok"):
+                    return self._json({"status": "quota_exceeded", "quota": q}, 403)
                 from app.analysis import miaoshou_collector
-                return self._json(miaoshou_collector.collect_to_miaoshou(offer_id))
+                resp = miaoshou_collector.collect_to_miaoshou(offer_id)
+                resp["quota"] = q
+                return self._json(resp)
             if path == "/api/miaoshou_check_login":
                 from app.analysis import miaoshou_collector
                 return self._json(miaoshou_collector.check_login())
