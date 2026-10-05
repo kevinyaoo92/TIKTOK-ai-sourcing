@@ -127,3 +127,22 @@
 - _state/OPEN_ISSUES.md
 - _state/PRODUCT_ROADMAP.md
 - _state/PHASE1_SPEC.md
+
+
+## 冻结服务器 Playwright 正式开发 2026-10-05 21:45
+
+### 本次完成
+- 新建 _state/ARCHITECTURE_FREEZE.md：冻结声明
+- app/analysis/supplier_finder.py 头部加 [FROZEN 2026-10-05] 注释
+- app/analysis/miaoshou_collector.py 头部加 [FROZEN 2026-10-05] 注释
+
+### 冻结定位
+- supplier_finder.py：保留，冻结，不继续扩展
+- miaoshou_collector.py：保留，冻结，不继续扩展
+- 服务器 Chrome（.chrome_1688 + CDP 9222）：保留测试用途
+- 以上定位为 Internal Validation / Reference Implementation
+- 正式执行层方向：Chrome Extension + 用户自己的 Chrome
+
+### 未修改
+- 现有 Playwright 执行逻辑未动
+- 未做 Chrome Extension、未删代码、未改前端、未碰配额/支付/AI

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# [FROZEN 2026-10-05] Internal Validation / Reference Implementation.
+# 不是 Frontharbor 最终生产执行架构。
+# 保留，冻结，不继续扩展。
+# 正式执行层方向：Chrome Extension + 用户自己的 Chrome。
+# 详见 _state/ARCHITECTURE_FREEZE.md。
 """1688 货源查找器：从关键词搜索 → 筛选 → 返回 1-3 个优质货源。
 
 设计原则（产品规则，不可绕过）：
