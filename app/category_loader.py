@@ -26,15 +26,19 @@ DEFAULT_CATEGORY_FILE_NAME = "泰国TK官方类目.txt"
 
 
 def default_category_file() -> Path:
-    """默认类目文件路径：桌面 泰国TK官方类目.txt。
+    """默认类目文件路径：项目内 app/data/泰国TK官方类目.txt。
 
     顺序：
     1. 环境变量 TIKTOK_CATEGORY_FILE（显式指定唯一来源）；
-    2. 当前用户桌面（%USERPROFILE%\\Desktop\\泰国TK官方类目.txt）。
+    2. 项目内 app/data/泰国TK官方类目.txt；
+    3. 兜底：当前用户桌面（兼容本地开发）。
     """
     env = os.environ.get("TIKTOK_CATEGORY_FILE", "").strip()
     if env:
         return Path(env)
+    project_file = Path(__file__).resolve().parent / "data" / DEFAULT_CATEGORY_FILE_NAME
+    if project_file.exists():
+        return project_file
     return Path.home() / "Desktop" / DEFAULT_CATEGORY_FILE_NAME
 
 
