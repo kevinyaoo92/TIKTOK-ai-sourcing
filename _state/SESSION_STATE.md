@@ -35,10 +35,12 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-05 21:50
+# SESSION STATE — 2026-10-06 09:52
 ## 1. Git
 
 ```
+04f6bd6 Phase 2 埋点：user_events 表 + /api/track 接口 + 前端 5 处事件 + 导航返回修复
+17e7cca 收尾：快照更新 + PRODUCT_ROADMAP 战略决策入库
 934b03f 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
 cadbaa9 修复 /api/categories 类目文件路径：优先读项目内 app/data/，不再依赖 Desktop
 7926139 新增：进度 vs 产品经理大纲对照汇报
@@ -47,27 +49,27 @@ cadbaa9 修复 /api/categories 类目文件路径：优先读项目内 app/data/
 f687e31 Phase 1: SESSION_STATE 加入 AI 职责清单，规定任务结束必须主动提醒收尾
 1809c3a Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
 a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
-61c1a59 Phase 1: 修复 find_suppliers 成功后未自动刷新额度 + 记录 WORK_ERRORS
-590cc99 Phase 1: 清理临时文件 + PHASE1_SPEC 勾选进度
 
 ---
- M _state/PRODUCT_ROADMAP.md
+ M _state/CURRENT_TASK.md
+?? _state/check_events.py
 
 ---
-* main 934b03f [origin/main] 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
+* main 04f6bd6 [origin/main] Phase 2 埋点：user_events 表 + /api/track 接口 + 前端 5 处事件 + 导航返回修复
 
 ```
 ## 2. 数据库
 
 ```
 active_period = 2026-09
-  - ai_analysis_log: 2512 行
+  - ai_analysis_log: 2546 行
   - app_config: 1 行
   - category: 182 行
   - collection_batch: 182 行
   - keyword_metric: 28014 行
   - opportunity_analysis: 2493 行
-  - sqlite_sequence: 4 行
+  - sqlite_sequence: 5 行
+  - user_events: 21 行
   - user_usage: 3 行
 ```
 ## 3. _state 文件
@@ -221,6 +223,29 @@ active_period = 2026-09
 ### 未修改
 - 现有 Playwright 执行逻辑未动
 - 未做 Chrome Extension、未删代码、未改前端、未碰配额/支付/AI
+
+
+## Phase 2 埋点 + 导航修复 2026-10-06 09:52
+
+### 本次完成
+- 新建 app/user_events.py：user_events 表 + record_event()
+- server.py 加 POST /api/track 路由
+- opportunity.html 加 5 个埋点：category_selected / opportunity_view / opportunity_detail / search_1688_click / find_supplier_click
+- 修复导航：showView + goBack 统一管理，所有返回按钮只回上一界面，不再直接跳首页
+
+### 数据表
+- user_events(id, anonymous_id, event_name, event_time, category, opportunity_id)
+- 存在 data/tiktok_market.db
+
+### 验证
+- 接口测试：POST /api/track 返回 ok=true
+- 浏览器全流程：category_selected + opportunity_view + find_supplier_click 已记录
+- 导航 5 条测试通过
+
+### 未做（按任务要求不做）
+- contact_submit 预留未做（当前无留资 UI）
+- 未做支付/会员/统计后台
+- 未碰 1688 / 妙手 / Playwright / Extension
 
 ### OPEN_ISSUES.md
 
@@ -711,4 +736,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-05 21:50:01
+2026-10-06 09:52:41

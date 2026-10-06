@@ -146,3 +146,26 @@
 ### 未修改
 - 现有 Playwright 执行逻辑未动
 - 未做 Chrome Extension、未删代码、未改前端、未碰配额/支付/AI
+
+
+## Phase 2 埋点 + 导航修复 2026-10-06 09:52
+
+### 本次完成
+- 新建 app/user_events.py：user_events 表 + record_event()
+- server.py 加 POST /api/track 路由
+- opportunity.html 加 5 个埋点：category_selected / opportunity_view / opportunity_detail / search_1688_click / find_supplier_click
+- 修复导航：showView + goBack 统一管理，所有返回按钮只回上一界面，不再直接跳首页
+
+### 数据表
+- user_events(id, anonymous_id, event_name, event_time, category, opportunity_id)
+- 存在 data/tiktok_market.db
+
+### 验证
+- 接口测试：POST /api/track 返回 ok=true
+- 浏览器全流程：category_selected + opportunity_view + find_supplier_click 已记录
+- 导航 5 条测试通过
+
+### 未做（按任务要求不做）
+- contact_submit 预留未做（当前无留资 UI）
+- 未做支付/会员/统计后台
+- 未碰 1688 / 妙手 / Playwright / Extension
