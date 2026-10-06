@@ -169,3 +169,44 @@
 - contact_submit 预留未做（当前无留资 UI）
 - 未做支付/会员/统计后台
 - 未碰 1688 / 妙手 / Playwright / Extension
+
+
+## 找货入口改回占位 + apply_experience 埋点 2026-10-06 10:53
+
+### 本次完成
+- 列表卡片 + 详情页按钮：去找货 → 申请体验
+- 新增 showApplyExperienceModal：弹"找货功能正在内测"提示
+- 点击处理：find_supplier_click + apply_experience 双埋点
+- user_events 白名单加 apply_experience
+- openFinderModal 保留为死代码（无调用点）
+- 提交：ca95954
+
+## 找货入口正式产品形态（找优质货源） 2026-10-06 11:15
+
+### 本次完成
+- 按钮文案：申请体验 → 找优质货源（列表卡片 + 详情页）
+- 弹窗重写为 showFindSourceModal：
+  找优质货源 / 会员专享功能 / 你当前有 10 次免费体验机会 /
+  使用后系统自动寻找 1688 货源 / [稍后再说] [立即找货]
+- 点"立即找货"：track(confirm_find_supplier) + toast "找货功能正在准备中，敬请期待。"
+- 预留 TODO：正式上线替换为 Chrome Extension 通道或启用已冻结的服务器 Playwright
+- user_events 白名单加 confirm_find_supplier
+- 未启动 Playwright / Chrome / 1688 自动找货
+- 提交：0ff15a1
+
+## 已知未修 bug（搁置） 2026-10-06 11:30
+
+### 现象
+切浏览器标签时偶尔弹空白 Chrome。
+
+### 根因
+opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
+→ POST /api/miaoshou_check_login → miaoshou_collector.check_login()
+→ _ensure_chrome_debug() → subprocess.Popen 启动 Chrome
+
+### 修复方案（未执行）
+删 opportunity.html 620-625 行 visibilitychange 监听，加注释说明。
+只改前端 1 处，不动后端冻结代码。
+
+### 搁置原因
+不频繁，且妙手正式执行层会搬到 Chrome Extension，这段逻辑会整体重写。

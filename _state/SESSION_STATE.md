@@ -35,10 +35,13 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-06 09:52
+# SESSION STATE — 2026-10-06 11:23
 ## 1. Git
 
 ```
+0ff15a1 Phase 2：找货入口改为正式产品形态（找优质货源 + 会员弹窗 + confirm_find_supplier 埋点）
+ca95954 Phase 2：找货入口改回体验申请占位，新增 apply_experience 埋点
+1f7e3b5 收尾：Phase 2 埋点进度快照
 04f6bd6 Phase 2 埋点：user_events 表 + /api/track 接口 + 前端 5 处事件 + 导航返回修复
 17e7cca 收尾：快照更新 + PRODUCT_ROADMAP 战略决策入库
 934b03f 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
@@ -46,16 +49,13 @@ cadbaa9 修复 /api/categories 类目文件路径：优先读项目内 app/data/
 7926139 新增：进度 vs 产品经理大纲对照汇报
 09f5913 清理 OPEN_ISSUES.md 头部 P0：归档已解决项，重写当前阻塞
 1939e32 Phase 1: 收尾清单加入 VPN 提醒（push 前必须先连 VPN）
-f687e31 Phase 1: SESSION_STATE 加入 AI 职责清单，规定任务结束必须主动提醒收尾
-1809c3a Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
-a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
 
 ---
  M _state/CURRENT_TASK.md
-?? _state/check_events.py
+ M _state/SESSION_STATE.md
 
 ---
-* main 04f6bd6 [origin/main] Phase 2 埋点：user_events 表 + /api/track 接口 + 前端 5 处事件 + 导航返回修复
+* main 0ff15a1 [origin/main] Phase 2：找货入口改为正式产品形态（找优质货源 + 会员弹窗 + confirm_find_supplier 埋点）
 
 ```
 ## 2. 数据库
@@ -69,7 +69,7 @@ active_period = 2026-09
   - keyword_metric: 28014 行
   - opportunity_analysis: 2493 行
   - sqlite_sequence: 5 行
-  - user_events: 21 行
+  - user_events: 34 行
   - user_usage: 3 行
 ```
 ## 3. _state 文件
@@ -246,6 +246,47 @@ active_period = 2026-09
 - contact_submit 预留未做（当前无留资 UI）
 - 未做支付/会员/统计后台
 - 未碰 1688 / 妙手 / Playwright / Extension
+
+
+## 找货入口改回占位 + apply_experience 埋点 2026-10-06 10:53
+
+### 本次完成
+- 列表卡片 + 详情页按钮：去找货 → 申请体验
+- 新增 showApplyExperienceModal：弹"找货功能正在内测"提示
+- 点击处理：find_supplier_click + apply_experience 双埋点
+- user_events 白名单加 apply_experience
+- openFinderModal 保留为死代码（无调用点）
+- 提交：ca95954
+
+## 找货入口正式产品形态（找优质货源） 2026-10-06 11:15
+
+### 本次完成
+- 按钮文案：申请体验 → 找优质货源（列表卡片 + 详情页）
+- 弹窗重写为 showFindSourceModal：
+  找优质货源 / 会员专享功能 / 你当前有 10 次免费体验机会 /
+  使用后系统自动寻找 1688 货源 / [稍后再说] [立即找货]
+- 点"立即找货"：track(confirm_find_supplier) + toast "找货功能正在准备中，敬请期待。"
+- 预留 TODO：正式上线替换为 Chrome Extension 通道或启用已冻结的服务器 Playwright
+- user_events 白名单加 confirm_find_supplier
+- 未启动 Playwright / Chrome / 1688 自动找货
+- 提交：0ff15a1
+
+## 已知未修 bug（搁置） 2026-10-06 11:30
+
+### 现象
+切浏览器标签时偶尔弹空白 Chrome。
+
+### 根因
+opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
+→ POST /api/miaoshou_check_login → miaoshou_collector.check_login()
+→ _ensure_chrome_debug() → subprocess.Popen 启动 Chrome
+
+### 修复方案（未执行）
+删 opportunity.html 620-625 行 visibilitychange 监听，加注释说明。
+只改前端 1 处，不动后端冻结代码。
+
+### 搁置原因
+不频繁，且妙手正式执行层会搬到 Chrome Extension，这段逻辑会整体重写。
 
 ### OPEN_ISSUES.md
 
@@ -736,4 +777,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-06 09:52:41
+2026-10-06 11:23:14
