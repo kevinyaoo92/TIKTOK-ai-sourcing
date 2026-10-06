@@ -456,7 +456,7 @@
           '</div>' +
           '<div class="mt-auto flex gap-2">' +
             '<button type="button" class="flex-1 rounded-lg border border-brand px-3 py-2 text-sm font-medium text-brand hover:bg-brand hover:text-white transition-colors" data-detail="' + esc(o.id) + '">查看详情</button>' +
-            '<button type="button" class="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover transition-colors" data-find-suppliers="' + esc(o.id) + '">去找货</button>' +
+            '<button type="button" class="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover transition-colors" data-find-suppliers="' + esc(o.id) + '">申请体验</button>' +
           '</div>' +
         '</article>';
       }).join("");
@@ -768,6 +768,21 @@
         .catch(function () { /* 静默重试 */ });
     }
 
+    function showApplyExperienceModal(oppId) {
+      var modal = getFinderEl();
+      var body = getFinderBody();
+      if (!modal || !body) return;
+      body.innerHTML =
+        '<div class="text-center py-8">' +
+          '<div class="text-4xl mb-3">📨</div>' +
+          '<h3 class="text-lg font-semibold text-slate-800 mb-2">找货功能正在内测</h3>' +
+          '<p class="text-sm text-slate-500 mb-2">当前仅向部分卖家开放。</p>' +
+          '<p class="text-sm text-slate-500 mb-6">提交申请后，我们会联系你安排体验。</p>' +
+          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+        '</div>';
+      modal.classList.remove("hidden");
+    }
+
     function openFinderModal(oppId) {
       // 防抖：模态层已经打开就不响应
       var modal = getFinderEl();
@@ -919,7 +934,7 @@
         /* 去找货按钮 */
         '<div class="mt-6">' +
           '<button type="button" class="w-full rounded-lg bg-brand px-4 py-3 text-base font-semibold text-white hover:bg-brand-hover transition-colors flex items-center justify-center gap-2" data-find-suppliers="' + esc(o.id) + '">' +
-            '<span aria-hidden="true">🔍</span> 去找货' +
+            '<span aria-hidden="true">🔍</span> 申请体验' +
           '</button>' +
         '</div>' +
 
@@ -1076,8 +1091,10 @@
       var fs = ev.target.closest("[data-find-suppliers]");
       if (fs) {
         var fid = fs.getAttribute("data-find-suppliers");
-        track("find_supplier_click", { opportunity_id: fid, category: STATE.selection ? STATE.selection.level1 : null });
-        openFinderModal(fid);
+        var fcat = STATE.selection ? STATE.selection.level1 : null;
+        track("find_supplier_click", { opportunity_id: fid, category: fcat });
+        track("apply_experience", { opportunity_id: fid, category: fcat });
+        showApplyExperienceModal(fid);
         return;
       }
       var cf = ev.target.closest("[data-action='close-finder']");
