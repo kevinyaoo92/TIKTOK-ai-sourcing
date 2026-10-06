@@ -1,20 +1,32 @@
 # 当前任务（进度存根）
 
-最后更新: 2026-10-05 17:29
+最后更新: 2026-10-06 11:45
 
-## 这次会话完成
+## 当前状态
 
-- Nginx 反代配置完成（80 端口 → 8123）
-- HTTP Basic Auth 已启用（用户 front，密码用户自己设的）
-- http://118.89.85.175 外网可访问，带密码保护
+- 第 4 个纠偏任务已完成（找货入口改为正式产品形态）
+- 当前"找优质货源"已按正式产品形态展示
+- 真实找货暂未执行（点"立即找货"仅提示"正在准备中"）
+- Playwright 继续冻结（内部验证资产，不继续投资）
+- Phase 2 进入真实用户行为验证阶段
+
+## 已完成能力速览
+
+- Web V1 类目路径已修复（app/data/泰国TK官方类目.txt，不再依赖 Desktop）
+- 服务器部署：CVM 118.89.85.175，systemd frontharbor，Nginx 反代 + Basic Auth
+- 9 月数据上线：keyword_metric 28014 / opportunity_analysis 2493 / 161 L2
+- 用户系统：匿名 UUID + user_usage 计数（find 10 / collect 5）
+- 用户行为埋点：user_events 表 + POST /api/track
+  - category_selected / opportunity_view / opportunity_detail
+  - search_1688_click / find_supplier_click / apply_experience（历史）
+  - confirm_find_supplier
+- 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货（toast 准备中）
 
 ## 下一步
 
-- 开发用户系统（匿名 UUID + 额度计数）
-- 开发免费额度逻辑（找货 10 次 / 采集 5 次）
-- 开发找货按钮占位
-- 域名解析（等备案通过）
-- HTTPS（等备案通过）
+- 等真实用户数据验证 Phase 2 商业价值
+- ICP 备案通过后：域名解析 + HTTPS + 撤 Basic Auth
+- 观察漏斗，决定是否进入 Phase 3（最小 Extension POC）
 
 ## 服务器状态
 
@@ -29,7 +41,7 @@
 - Nginx 配置: /etc/nginx/sites-available/frontharbor
 - 前端访问: http://118.89.85.175（带 Basic Auth）
 
-## 未完成任务清单
+## 未完成任务清单（Phase 1 + Phase 2）
 
 - [x] SSH 登录服务器
 - [x] 服务器初始化
@@ -38,23 +50,26 @@
 - [x] 前端部署
 - [x] Nginx 反代
 - [x] 访问控制（Basic Auth 临时挡外网）
-- [ ] 用户系统
-- [ ] 免费额度
-- [ ] 找货占位
+- [x] 用户系统（匿名 UUID）
+- [x] 免费额度（find 10 / collect 5）
+- [x] 找货入口（正式产品形态）
+- [x] 端到端测试
+- [x] 用户行为埋点（Phase 2）
+- [x] 导航返回逐层修复
 - [ ] 域名解析（等备案）
 - [ ] HTTPS（等备案）
-- [ ] 端到端测试
+- [ ] 真实用户数据观察（Phase 2 进行中）
+- [ ] 已知未修 bug：切标签偶尔弹空白 Chrome（搁置）
 
 ## 新会话开场白
 
-读以下文件，然后继续 Phase 1 开发：
+读以下文件，然后继续当前阶段开发：
 - _state/CURRENT_TASK.md
 - _state/OPEN_ISSUES.md
 - _state/PRODUCT_ROADMAP.md
 - _state/PHASE1_SPEC.md
 
 读完直接：复述进度 → 列下一步 → 开始执行。
----
 
 ## 自动快照 2026-10-05 18:10
 
