@@ -25,6 +25,7 @@ ALLOWED_EVENTS = {
     "find_supplier_click",
     "contact_submit",
     "apply_experience",
+    "confirm_find_supplier",
 }
 
 

@@ -456,7 +456,7 @@
           '</div>' +
           '<div class="mt-auto flex gap-2">' +
             '<button type="button" class="flex-1 rounded-lg border border-brand px-3 py-2 text-sm font-medium text-brand hover:bg-brand hover:text-white transition-colors" data-detail="' + esc(o.id) + '">查看详情</button>' +
-            '<button type="button" class="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover transition-colors" data-find-suppliers="' + esc(o.id) + '">申请体验</button>' +
+            '<button type="button" class="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover transition-colors" data-find-suppliers="' + esc(o.id) + '">找优质货源</button>' +
           '</div>' +
         '</article>';
       }).join("");
@@ -768,17 +768,23 @@
         .catch(function () { /* 静默重试 */ });
     }
 
-    function showApplyExperienceModal(oppId) {
+    function showFindSourceModal(oppId) {
       var modal = getFinderEl();
       var body = getFinderBody();
       if (!modal || !body) return;
       body.innerHTML =
         '<div class="text-center py-8">' +
-          '<div class="text-4xl mb-3">📨</div>' +
-          '<h3 class="text-lg font-semibold text-slate-800 mb-2">找货功能正在内测</h3>' +
-          '<p class="text-sm text-slate-500 mb-2">当前仅向部分卖家开放。</p>' +
-          '<p class="text-sm text-slate-500 mb-6">提交申请后，我们会联系你安排体验。</p>' +
-          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+          '<div class="text-4xl mb-3">🔍</div>' +
+          '<h3 class="text-xl font-semibold text-slate-800 mb-2">找优质货源</h3>' +
+          '<p class="text-sm text-slate-600 mb-6">会员专享功能</p>' +
+          '<div class="rounded-lg bg-brand/5 border border-brand/20 px-6 py-4 mb-5 inline-block">' +
+            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">10</span> 次免费体验机会</p>' +
+          '</div>' +
+          '<p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">使用后，系统将根据当前商品机会，自动为你寻找匹配的优质 1688 货源。</p>' +
+          '<div class="flex gap-3 justify-center">' +
+            '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">稍后再说</button>' +
+            '<button class="rounded-lg bg-brand px-6 py-2 text-sm font-medium text-white hover:bg-brand-hover" data-action="confirm-find-supplier" data-opp-id="' + esc(oppId) + '">立即找货</button>' +
+          '</div>' +
         '</div>';
       modal.classList.remove("hidden");
     }
@@ -934,7 +940,7 @@
         /* 去找货按钮 */
         '<div class="mt-6">' +
           '<button type="button" class="w-full rounded-lg bg-brand px-4 py-3 text-base font-semibold text-white hover:bg-brand-hover transition-colors flex items-center justify-center gap-2" data-find-suppliers="' + esc(o.id) + '">' +
-            '<span aria-hidden="true">🔍</span> 申请体验' +
+            '<span aria-hidden="true">🔍</span> 找优质货源' +
           '</button>' +
         '</div>' +
 
@@ -1093,8 +1099,19 @@
         var fid = fs.getAttribute("data-find-suppliers");
         var fcat = STATE.selection ? STATE.selection.level1 : null;
         track("find_supplier_click", { opportunity_id: fid, category: fcat });
-        track("apply_experience", { opportunity_id: fid, category: fcat });
-        showApplyExperienceModal(fid);
+        showFindSourceModal(fid);
+        return;
+      }
+      var cfs = ev.target.closest("[data-action='confirm-find-supplier']");
+      if (cfs) {
+        var cfid = cfs.getAttribute("data-opp-id");
+        var cfcat = STATE.selection ? STATE.selection.level1 : null;
+        track("confirm_find_supplier", { opportunity_id: cfid, category: cfcat });
+        showToast("找货功能正在准备中，敬请期待。");
+        // TODO(Phase 4): 接入自动找货执行逻辑
+        //   现有 Playwright 实现位于 openFinderModal() + POST /api/find_suppliers
+        //   正式上线替换为 Chrome Extension 通道或启用已冻结的服务器 Playwright
+        // closeFinderModal();  // 视产品需要决定是否关闭
         return;
       }
       var cf = ev.target.closest("[data-action='close-finder']");
