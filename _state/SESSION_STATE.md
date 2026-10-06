@@ -35,26 +35,26 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-05 20:07
+# SESSION STATE — 2026-10-05 21:50
 ## 1. Git
 
 ```
+934b03f 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
+cadbaa9 修复 /api/categories 类目文件路径：优先读项目内 app/data/，不再依赖 Desktop
+7926139 新增：进度 vs 产品经理大纲对照汇报
+09f5913 清理 OPEN_ISSUES.md 头部 P0：归档已解决项，重写当前阻塞
+1939e32 Phase 1: 收尾清单加入 VPN 提醒（push 前必须先连 VPN）
 f687e31 Phase 1: SESSION_STATE 加入 AI 职责清单，规定任务结束必须主动提醒收尾
 1809c3a Phase 1: 新增 SESSION_STATE.md 生成脚本（跨会话开场加载包）
 a1c9922 Phase 1: 端到端验收通过 + 状态文件同步
 61c1a59 Phase 1: 修复 find_suppliers 成功后未自动刷新额度 + 记录 WORK_ERRORS
 590cc99 Phase 1: 清理临时文件 + PHASE1_SPEC 勾选进度
-3428828 Phase 1: 额度查询接口 + 前端额度显示 + 扣减刷新闭环
-9026209 进度快照 2026-10-05 18:10
-47de16d Phase 1: 用户额度后端（find 10 / collect 5，UUID 计数）
-d5e9b5f init_user_usage 支持 --db 参数
-1f77418 Phase 1: 加 user_usage 建表脚本
 
 ---
- M _state/make_session_report.py
+ M _state/PRODUCT_ROADMAP.md
 
 ---
-* main f687e31 [origin/main] Phase 1: SESSION_STATE 加入 AI 职责清单，规定任务结束必须主动提醒收尾
+* main 934b03f [origin/main] 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
 
 ```
 ## 2. 数据库
@@ -203,41 +203,55 @@ active_period = 2026-09
 - _state/PRODUCT_ROADMAP.md
 - _state/PHASE1_SPEC.md
 
+
+## 冻结服务器 Playwright 正式开发 2026-10-05 21:45
+
+### 本次完成
+- 新建 _state/ARCHITECTURE_FREEZE.md：冻结声明
+- app/analysis/supplier_finder.py 头部加 [FROZEN 2026-10-05] 注释
+- app/analysis/miaoshou_collector.py 头部加 [FROZEN 2026-10-05] 注释
+
+### 冻结定位
+- supplier_finder.py：保留，冻结，不继续扩展
+- miaoshou_collector.py：保留，冻结，不继续扩展
+- 服务器 Chrome（.chrome_1688 + CDP 9222）：保留测试用途
+- 以上定位为 Internal Validation / Reference Implementation
+- 正式执行层方向：Chrome Extension + 用户自己的 Chrome
+
+### 未修改
+- 现有 Playwright 执行逻辑未动
+- 未做 Chrome Extension、未删代码、未改前端、未碰配额/支付/AI
+
 ### OPEN_ISSUES.md
 
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 20260929_170123
+最后更新: 2026-10-05 20:30
 项目根: D:\tiktok-ai-sourcing
 
-## P0 数据与月度更新
-1. 9月数据采集 SOP 未实战：脚本参数、period 切换、中间文件路径、备份时机、失败回退。
-2. keyword_metric 里 19 个缺失 L2 是否有数据，未查。
-3. 2522 vs 3568 口径未对齐。
-4. ai_analysis_log 7310 行 vs opportunity_analysis 2522 行，差异原因未查。
+## P0 — 当前阻塞
+1. ICP 备案审核中：腾讯云初审 + 陕西管局审核（7-10 工作日），等 010 电话 + 幕布拍照。
+2. 域名解析 + HTTPS：等备案通过后做。
+3. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
 
-## P0 代码真实状态
-5. supplier_finder.py 是完整实现还是 stub，未查。
-6. SKU 深度库存检查后端是否存在 _check_sku_stock_deep，未查。
-7. opportunity.html 的 bak_finder / bak_skudims 对应功能状态，未查。
-8. 查清前，不要点"去找货"按钮。
+## P1 — 待办
+1. 撤除 Basic Auth（域名 + HTTPS 上线后）。
+2. 妙手集成方式确认：当前用 Playwright 走链接采集，Phase 3 才拆到 Chrome 扩展。
+3. 项目卫生：C 盘空壳 tiktok-audit、云盘副本、opportunity.html.bak_* 备份清理。
 
-## P1 商业化阻塞
-9. 营业执照经营范围变更 -> ICP 备案。
-10. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
-11. 妙手集成：插件 vs API，未定。
-12. 用户系统 + 免费 5 次，未开发。
-13. 部署上云、域名解析、HTTPS，未开始。
+## P2 — 长期
+1. 评分体系回测，无成交数据。
+2. featurePair 类目映射表（解决"女士连衣裙搜出童装"类问题）。
+3. 多国家扩展（TH / VN / MY / PH / ID）。
 
-## P1 项目卫生
-14. C 盘空壳 tiktok-audit 和云盘副本如何处理。
-15. opportunity.html.bak_* 20+ 个备份文件清理。
-16. Git 配置、临时脚本清理。
-17. 评分体系回测，无成交数据。
-
-## 待用户提供
-18. DeepSeek API key 位置。
-19. 官方类目 TXT 位置。
-20. 1688 五项指标位置（找货功能前置）。
+## 历史已解决（归档，仅留痕）
+- 9月数据采集 SOP：已全量上线（28014 关键词 / 2493 机会 / 161 L2）。
+- 19 个缺失 L2：已确认数据源本身少（cohort < 3）。
+- supplier_finder.py：已完整实现，弹窗返回货源。
+- SKU 深度库存检查 `_check_sku_stock_deep`：20261001_114414 SKU 闭环完成。
+- opportunity.html bak_finder / bak_skudims：端到端已通过。
+- "不要点去找货按钮"：已放行，Phase 1 端到端验收通过。
+- 用户系统 + 免费额度：已完成，find 10 / collect 5，UUID 计数。
+- 部署上云：已完成（CVM 118.89.85.175，systemd，Nginx 反代）。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。
@@ -248,7 +262,7 @@ active_period = 2026-09
 ## 已确认事实（防止重复排查）
 - 唯一活跃项目: D:\tiktok-ai-sourcing
 - 主库: data\tiktok_market.db, 45.86MB, integrity ok
-- 7 张表齐全, category 181 行, keyword_metric 27954 行
+- 7 张表齐全, category 182 行, keyword_metric 28014 行
 - 10 个历史备份在 data\, 9/22-9/28 时间线完整
 - 前端端口 8123, 已跑通
 - Chrome profile: .chrome_1688, CDP 9222 已验证
@@ -264,11 +278,6 @@ active_period = 2026-09
 - 3+ 字段：按 2 字段处理，标记 dimension_count>=3，忽略第三维度
 - 不考虑误杀，命中即停
 - 评分体系 V1 冻结: Score = 100*(0.40*Demand+0.35*Conversion+0.25*Competition)
-
-## 未解决问题汇总（按优先级）
-P0: 9月采集 SOP / 19 缺失 L2 / supplier_finder 状态 / SKU 代码状态
-P1: ICP 备案 / 数据合规 / 妙手 / 用户系统 / 部署
-P2: 项目卫生 / 备份清理 / Git
 
 ## SKU 闭环完成（20261001_114414）
 
@@ -543,6 +552,40 @@ AI 读完后应能：
 
 ### PRODUCT_ROADMAP.md
 
+# 战略决策 2026-10-05（专家研判结论）
+
+## 结论
+
+技术可行性已验证（真实找货 + 妙手 + 额度已跑通）。
+现在停止证明技术，开始证明"用户真的需要，且愿意付钱"。
+
+## 具体决策
+
+1. 服务器 Playwright 找货 + 妙手采集
+   - 保留为内部验证资产
+   - 不再作为正式架构继续投资
+   - 不删除、不优化、不扩展
+
+2. 下一阶段：补 Phase 2（商业验证）
+   - 用户侧"找货"改回占位 + 申请体验
+   - 补埋点：机会点击 / 找货点击 / 留资 / 付费意愿
+   - 观察漏斗，决定是否进 Phase 3
+
+3. 通过后：最小 Extension POC
+   - 只验证：网站 → 扩展 → 用户 1688 → 读一个商品三字段 → 返回
+   - POC PASS 标准：连续成功 3 次
+   - 不做妙手、不做批量、不做 AI、不做支付
+
+## 不做
+
+- 服务器并发找货优化
+- Playwright 架构化
+- 妙手架构化
+- 双轨执行（服务器 + 扩展）
+
+---
+
+（以下是原 PRODUCT_ROADMAP 内容）
 # 产品路线图
 
 最后更新: 2026-10-05 14:58
@@ -668,4 +711,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-05 20:07:33
+2026-10-05 21:50:01
