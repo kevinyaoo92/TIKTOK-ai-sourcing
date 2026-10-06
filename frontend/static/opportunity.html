@@ -332,7 +332,11 @@
     }
 
     /* ---------------------------------------------------------- 视图切换 */
-    function showView(name) {
+    var CURRENT_VIEW = null;
+    var _historyReady = false;
+    function showView(name, opts) {
+      var prev = CURRENT_VIEW;
+      CURRENT_VIEW = name;
       el.overview.classList.toggle("hidden", name !== "overview");
       el.list.classList.toggle("hidden", name !== "list");
       el.detail.classList.toggle("hidden", name !== "detail");
@@ -343,6 +347,32 @@
         b.classList.toggle("text-white/80", !active);
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
+      if (!(opts && opts.fromPop) && prev !== name) {
+        try {
+          var url = (name === "overview")
+            ? window.location.pathname + window.location.search
+            : "#" + name;
+          if (!_historyReady) {
+            _historyReady = true;
+            history.replaceState({ view: name }, "", url);
+          } else {
+            history.pushState({ view: name }, "", url);
+          }
+        } catch (e) {}
+      }
+      _historyReady = true;
+    }
+
+    function goBack() {
+      if (!CURRENT_VIEW || CURRENT_VIEW === "overview") {
+        location.href = "/";
+        return;
+      }
+      if (window.history.length > 1) {
+        history.back();
+      } else {
+        showView("overview");
+      }
     }
 
     /* ---------------------------------------------------------- 总览页 */
@@ -508,6 +538,22 @@
       localStorage.setItem(KEY, v);
       document.cookie = "frontharbor_uuid=" + encodeURIComponent(v) + "; max-age=" + (365*24*3600) + "; path=/";
       return v;
+    }
+
+    function track(eventName, extra) {
+      try {
+        var payload = {
+          anonymous_id: getUUID(),
+          event_name: eventName
+        };
+        if (extra && extra.category) payload.category = extra.category;
+        if (extra && extra.opportunity_id) payload.opportunity_id = extra.opportunity_id;
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(function () {});
+      } catch (e) {}
     }
 
     function refreshQuota() {
@@ -788,6 +834,7 @@
         if (STATE.opportunities[i].id === id) { o = STATE.opportunities[i]; break; }
       }
       if (!o) { showToast("未找到该机会"); return; }
+      track("opportunity_detail", { opportunity_id: id, category: STATE.selection ? STATE.selection.level1 : null });
       var r = ratingInfo(o.rating);
 
       var evidenceRows = o.evidence.map(function (e) {
@@ -826,7 +873,7 @@
       }).join("");
 
       var tagItems = o.searchTerms1688.map(function (s) {
-        return '<span class="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600">' + esc(s) + '</span>';
+        return '<span data-search-1688="' + esc(s) + '" class="cursor-pointer rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-200">' + esc(s) + '</span>';
       }).join("");
 
       var actions = o.action ? "｜" + esc(o.action) : "";
@@ -982,12 +1029,11 @@
         '</div>';
 
       document.getElementById("back-to-list").addEventListener("click", function () {
-        history.back();
+        goBack();
       });
       el.detail.querySelectorAll(".feedback-btn").forEach(function (b) {
         b.addEventListener("click", function () { showToast("感谢反馈"); });
       });
-      history.pushState({ view: "detail", id: id }, "", "#detail");
       showView("detail");
     }
 
@@ -996,19 +1042,25 @@
       b.addEventListener("click", function () {
         var v = b.getAttribute("data-view");
         if (v === "back") {
-          location.href = "/";
+          goBack();
           return;
         }
+        if (v === CURRENT_VIEW) return;
         showView(v);
       });
     });
 
     window.addEventListener("popstate", function (ev) {
       var v = (ev.state && ev.state.view) || "overview";
-      showView(v);
+      showView(v, { fromPop: true });
     });
 
     document.addEventListener("click", function (ev) {
+      var s1688 = ev.target.closest("[data-search-1688]");
+      if (s1688) {
+        track("search_1688_click", { category: STATE.selection ? STATE.selection.level1 : null });
+        return;
+      }
       var t = ev.target.closest("[data-detail]");
       if (t) {
         openDetail(t.getAttribute("data-detail"));
@@ -1023,7 +1075,9 @@
       }
       var fs = ev.target.closest("[data-find-suppliers]");
       if (fs) {
-        openFinderModal(fs.getAttribute("data-find-suppliers"));
+        var fid = fs.getAttribute("data-find-suppliers");
+        track("find_supplier_click", { opportunity_id: fid, category: STATE.selection ? STATE.selection.level1 : null });
+        openFinderModal(fid);
         return;
       }
       var cf = ev.target.closest("[data-action='close-finder']");
@@ -1204,10 +1258,15 @@
           STATE.cohortSize = (data.summary && data.summary.cohort_size) || 0;
           STATE.summary = data.summary || {};
           STATE.opportunities = (data.opportunities || []).map(normOpp);
+          if (STATE.selection && STATE.selection.level1) {
+            var cat = STATE.selection.level1 + " > " + ((STATE.selection.level2 && STATE.selection.level2[0]) || "");
+            track("category_selected", { category: cat });
+          }
           renderOverview();
           renderList();
           updateSortArrows();
           showView("overview");
+          track("opportunity_view", { category: STATE.selection ? STATE.selection.level1 : null });
           if (STATE.opportunities.length === 0) {
             showToast("该类目清洗/过滤后无可用机会");
           }

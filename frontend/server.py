@@ -40,6 +40,7 @@ from app.category_loader import load_catalog  # noqa: E402
 from app.analysis import analyze_service  # noqa: E402
 from app.analysis import supplier_finder  # noqa: E402
 from app import user_usage  # noqa: E402
+from app import user_events  # noqa: E402
 import threading  # noqa: E402
 import uuid  # noqa: E402
 import time  # noqa: E402
@@ -387,6 +388,19 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
         try:
 
+            if path == "/api/track":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                anon = (body.get("anonymous_id") or "").strip()
+                event = (body.get("event_name") or "").strip()
+                category = (body.get("category") or "").strip() or None
+                opp_id = (body.get("opportunity_id") or "").strip() or None
+                r = user_events.record_event(MARKET_DB, anon, event, category, opp_id)
+                return self._json(r)
             if path == "/api/analyze":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"
