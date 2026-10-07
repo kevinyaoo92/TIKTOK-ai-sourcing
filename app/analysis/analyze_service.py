@@ -193,8 +193,15 @@ def _read_cached_opportunities(db_path, country, level1, level2, period, top_n):
                ORDER BY score DESC""",
             (country, level1, level2, period)).fetchall()
 
-    # 修 C：用 expected 判据，不是 top_n
-    if len(rows) < expected:
+    # 缓存命中判据（2026-10-07 修）
+    # 旧判据 len(rows) < expected 恒成立（候选数=过滤前，rows=过滤后，天然<=候选数），
+    # 导致 161 个 L2 缓存全部不命中，每次打开都重跑 Stage0-5 + AI（1-3 分钟）。
+    # 新判据：
+    #   1) rows 非空（数据库里有数据）
+    #   2) 至少一行 ai_summary 有内容（AI 跑过 = 数据完整，挡住半截崩溃的残次数据）
+    if len(rows) == 0:
+        return None
+    if not any((r["ai_summary"] or "").strip() for r in rows):
         return None
 
     opportunities = []

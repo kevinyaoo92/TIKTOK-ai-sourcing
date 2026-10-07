@@ -273,27 +273,12 @@
         keyword: o.representative_keyword,
         keywordCn: o.representative_keyword_cn || o.name_cn || "",
         searchTerms1688: o.search_terms_1688 || [],
-        relatedKeywords: (o.related_keywords || []).map(function (w) {
-          if (typeof w === "string") {
-            return { word: w, wordCn: "", search: "—", ctor: "—", products: "—" };
-          }
-          return {
-            word: w.keyword || "",
-            wordCn: w.keyword_cn || "",
-            search: w.search || "—",
-            ctor: w.ctor || "—",
-            products: w.products || "—"
-          };
-        }),
         evidence: o.evidence || [],
         aiSummary: o.ai_summary || "",
         marketJudgment: o.market_judgment || "—",
         competitionJudgment: o.competition_judgment || "—",
         suitable: o.suitable_for_tiktok_th || "—",
         searchTerms1688: o.search_terms_1688 || [],
-        priceSuggestion: "",
-        priceTag: "",
-        contentSuggestions: [],
         risks: o.risks || [],
         confidence: o.confidence || 0,
         sampleSize: STATE.cohortSize || o.summary_cohort_size || 0
@@ -470,7 +455,6 @@
       var list = STATE.opportunities.filter(function (o) {
         if (!q) return true;
         var hay = [o.name, o.keyword, o.keywordCn, o.category]
-          .concat(o.relatedKeywords.map(function (k) { return k.word + " " + k.wordCn; }))
           .join(" ").toLowerCase();
         return hay.indexOf(q) !== -1;
       });
@@ -872,23 +856,6 @@
         '</tr>';
       }).join("");
 
-      var relatedRows = o.relatedKeywords.map(function (k) {
-        var cnLine = k.wordCn ? '<div class="text-xs text-slate-400 mb-2">' + esc(k.wordCn) + '</div>' : '<div class="mb-2"></div>';
-        return '<div class="rounded-lg border border-slate-200 bg-white p-3">' +
-          '<div class="font-medium text-slate-800">' + esc(k.word) + '</div>' +
-          cnLine +
-          '<div class="grid grid-cols-3 gap-2 text-xs">' +
-            '<div><div class="text-slate-400">搜索量</div><div class="font-medium text-slate-700">' + esc(k.search) + '</div></div>' +
-            '<div><div class="text-slate-400">CTOR</div><div class="font-medium text-slate-700">' + esc(k.ctor) + '</div></div>' +
-            '<div><div class="text-slate-400">在售商品</div><div class="font-medium text-slate-700">' + esc(k.products) + '</div></div>' +
-          '</div>' +
-        '</div>';
-      }).join("");
-
-      var contentItems = o.contentSuggestions.map(function (s) {
-        return '<li class="flex items-start gap-2 text-sm text-slate-700"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true"></span>' + esc(s) + '</li>';
-      }).join("");
-
       var riskItems = o.risks.map(function (s) {
         return '<li class="flex items-start gap-2 text-sm text-slate-700"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-hidden="true"></span>' + esc(s) + '</li>';
       }).join("");
@@ -969,15 +936,14 @@
           '<p class="text-sm leading-relaxed text-slate-700">' + esc(o.aiSummary) + '</p>' +
         '</section>' +
 
-        /* (5) 代表关键词与关联词 */
+        /* (5) 代表关键词 */
         '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
-          '<h3 class="text-base font-semibold text-slate-800 mb-3">代表关键词与关联词</h3>' +
-          '<div class="rounded-lg bg-slate-50 px-4 py-3 mb-4">' +
+          '<h3 class="text-base font-semibold text-slate-800 mb-3">代表关键词</h3>' +
+          '<div class="rounded-lg bg-slate-50 px-4 py-3">' +
             '<div class="text-xs text-slate-500">核心词</div>' +
             '<div class="text-base font-semibold text-slate-900">' + esc(o.keyword) + '</div>' +
             '<div class="text-sm text-slate-400">' + esc(o.keywordCn) + '</div>' +
           '</div>' +
-          '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' + relatedRows + '</div>' +
         '</section>' +
 
         /* (6) 市场/竞争/适合三卡片 */
@@ -1002,22 +968,7 @@
           '<div class="flex flex-wrap gap-2">' + tagItems + '</div>' +
         '</section>' +
 
-        /* (8) 建议定价 */
-        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
-          '<h3 class="text-base font-semibold text-slate-800 mb-3">建议定价</h3>' +
-          '<div class="flex flex-wrap items-center gap-3">' +
-            '<span class="text-2xl font-bold text-brand">' + (o.priceSuggestion || "待补充") + '</span>' +
-            (o.priceTag ? '<span class="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">' + esc(o.priceTag) + '</span>' : '<span class="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">参考均价见上方证据表</span>') +
-          '</div>' +
-        '</section>' +
-
-        /* (9) 内容营销建议 */
-        '<section class="card-print rounded-xl border border-slate-200 bg-white p-6 shadow-sm">' +
-          '<h3 class="text-base font-semibold text-slate-800 mb-3">内容营销建议</h3>' +
-          '<ul class="space-y-2">' + (contentItems || '<li class="text-sm text-slate-400">暂无可展示内容建议，可基于 AI 分析补充。</li>') + '</ul>' +
-        '</section>' +
-
-        /* (10) 风险提示 */
+        /* (8) 风险提示 */
         '<section class="card-print rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">' +
           '<h3 class="text-base font-semibold text-slate-800 mb-3">风险提示</h3>' +
           '<ul class="space-y-2">' + riskItems + '</ul>' +

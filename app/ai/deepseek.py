@@ -78,7 +78,6 @@ _SYSTEM_OPPORTUNITY_PROMPT = """你是泰国 TikTok Shop 选品专家。请根�
 - 类目：{level1} > {level2}
 - 周期：{period}
 - 代表关键词：{keyword}
-- 关联关键词：{related_keywords}
 - 搜索量：{search_volume}（类目内 {demand_pct}）
 - CTOR：{ctor_score}（类目内 {intent_pct}）
 - SKU销售指数：{sku_sales_index}（类目内 {sales_pct}）
@@ -215,7 +214,7 @@ def analyze_opportunity(opp_input: dict, *, temperature: float = 0.1,
     """对单个 Top N 机会调用 DeepSeek 选品专家分析，返回结构化 JSON。
 
     输入 opp_input（由 Python 侧构造，含 level1/level2/period/keyword/
-    related_keywords/search_volume/ctor_score/sku_sales_index/on_sale_products/
+    search_volume/ctor_score/sku_sales_index/on_sale_products/
     ctr_index/demand_pct/intent_pct/sales_pct/competition_pct/opportunity_score/rating）。
 
     返回 dict（用户规定字段）：
@@ -233,10 +232,6 @@ def analyze_opportunity(opp_input: dict, *, temperature: float = 0.1,
         level2=opp_input.get("level2", ""),
         period=opp_input.get("period", ""),
         keyword=opp_input.get("keyword", ""),
-        related_keywords="、".join(
-        r.get("keyword", "") if isinstance(r, dict) else str(r)
-        for r in (opp_input.get("related_keywords", []) or [])
-    ),
         search_volume=opp_input.get("search_volume", "—"),
         demand_pct=_fmt_pct(opp_input.get("demand_pct")),
         ctor_score=opp_input.get("ctor_score", "—"),
@@ -255,7 +250,6 @@ def analyze_opportunity(opp_input: dict, *, temperature: float = 0.1,
             "level2": opp_input.get("level2", ""),
             "period": opp_input.get("period", ""),
             "keyword": opp_input.get("keyword", ""),
-            "related_keywords": opp_input.get("related_keywords", []),
             "metrics": {
                 "search_volume": opp_input.get("search_volume"),
                 "demand_pct": opp_input.get("demand_pct"),
