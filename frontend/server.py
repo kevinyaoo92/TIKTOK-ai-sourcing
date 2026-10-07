@@ -285,6 +285,29 @@ def api_opportunity(key: str) -> dict:
 
 
 # ========== POC 任务 API（阶段 1A）==========
+def api_poc_build_search_url(body: dict) -> dict:
+    """用 GBK 编码构造 1688 搜索 URL（扩展直接使用）。"""
+    from urllib.parse import quote
+    keyword = (body.get("keyword") or "").strip()
+    if not keyword:
+        return {"status": "error", "error": "missing_keyword"}
+    try:
+        encoded = quote(keyword.encode("gbk"))
+    except UnicodeEncodeError:
+        return {"status": "error", "error": "gbk_encode_failed"}
+    url = "https://s.1688.com/selloffer/offer_search.htm?keywords=" + encoded
+    return {"status": "ok", "url": url, "keyword": keyword}
+
+
+def api_poc_card_filter(body: dict) -> dict:
+    cards = body.get("cards") or []
+    keyword = (body.get("keyword") or "").strip()
+    if not keyword:
+        return {"status": "error", "error": "missing_keyword"}
+    r = poc_judge.card_filter(cards, keyword)
+    return {"status": "ok", "cards": r["cards"], "stats": r["stats"]}
+
+
 def api_poc_judge(body: dict) -> dict:
     """接收阶段 3A payload，运行判断器。"""
     payload = body.get("payload") or {}
@@ -492,6 +515,22 @@ class Handler(BaseHTTPRequestHandler):
                 opp_id = (body.get("opportunity_id") or "").strip() or None
                 r = user_events.record_event(MARKET_DB, anon, event, category, opp_id)
                 return self._json(r)
+            if path == "/api/poc_build_search_url":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_build_search_url(body))
+            if path == "/api/poc_card_filter":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_card_filter(body))
             if path == "/api/poc_judge":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"

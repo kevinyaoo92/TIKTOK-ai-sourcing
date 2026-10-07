@@ -101,3 +101,96 @@ def judge_single(product, keyword=None):
 
     return {"result": "reject", "tier": None,
             "reason": "四档全部不通过", "attempts": attempts}
+# ========== 阶段 4：卡片层过滤 ==========
+import json as _json
+import requests as _requests
+
+SHOP_IMG_SIGS = ["4815-2-tps-232-56", "1330-2-tps-264-64"]
+
+_AI_SYS_PROMPT = """你是1688商品类目判定助手。用户给搜索词和一批商品卡片标题，你剔除明显不属于搜索词类目的卡片。
+
+【主商品判定】
+标题里最后一个商品名词是主商品，前面的都是描述/修饰词。
+例: 新款耐高温防滑隔热加厚迷你手持熨烫板挂烫防烫手套 -> 主商品是防烫手套，不是烫衣板
+例: 女士连衣裙【送发夹】 -> 主商品是连衣裙，发夹是赠品
+
+【赠品剔除规则】
+【】()[]里的词、买X送Y、赠、附赠、送 里的词一律不算主商品。
+
+【剔除条件】
+- 搜索词指向的类目与标题主商品不一致 -> 剔除
+- 搜索词是女士/女装/女款，标题明确含童装词 -> 剔除
+- 搜索词是男士/男装/男款，标题明确含童装词 -> 剔除
+- 搜索词是女士，标题明确是纯男装 -> 剔除
+- 搜索词是男士，标题明确是纯女装 -> 剔除
+
+【关键约束】
+- 拿不准的一律保留
+- 宁可少剔除，不可多剔除
+- 只返回 JSON，不要解释
+格式: {"rejected": [{"id": "xxx", "reason": "简短理由"}]}
+若无明显错的返回 {"rejected": []}"""
+
+
+def has_biz_tag(shop_imgs):
+    for img in (shop_imgs or []):
+        for sig in SHOP_IMG_SIGS:
+            if sig in img:
+                return True
+    return False
+
+
+def ai_filter_cards(cards, keyword):
+    from app import config
+    api_key = getattr(config, "DEEPSEEK_API_KEY", "") or ""
+    if not api_key or not cards:
+        return cards
+    lines = ["搜索词: " + keyword, "", "共 " + str(len(cards)) + " 张卡片:"]
+    for c in cards:
+        title = (c.get("title") or c.get("text") or "")[:80]
+        lines.append("- id=" + str(c.get("offer_id", "")) + " 标题=" + title)
+    user_prompt = "\n".join(lines)
+    try:
+        r = _requests.post(
+            "https://api.deepseek.com/v1/chat/completions",
+            headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+            json={
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": _AI_SYS_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.0,
+                "response_format": {"type": "json_object"}
+            },
+            timeout=25
+        )
+        if r.status_code != 200:
+            return cards
+        content = r.json()["choices"][0]["message"]["content"]
+        parsed = _json.loads(content)
+        rejected = parsed.get("rejected", []) or []
+        rejected_ids = set()
+        for x in rejected:
+            if isinstance(x, dict):
+                rid = str(x.get("id", "")).strip()
+                if rid:
+                    rejected_ids.add(rid)
+        return [c for c in cards if str(c.get("offer_id", "")) not in rejected_ids]
+    except Exception:
+        return cards
+
+
+def card_filter(cards, keyword):
+    n_input = len(cards)
+    cards = [c for c in cards if has_biz_tag(c.get("shop_imgs"))]
+    n_biz = len(cards)
+    cards = [c for c in cards if title_matches_keyword(c.get("title") or c.get("text") or "", keyword)]
+    n_gender = len(cards)
+    cards = ai_filter_cards(cards, keyword)
+    n_ai = len(cards)
+    cards.sort(key=lambda x: -(x.get("rate") or 0))
+    return {
+        "cards": cards,
+        "stats": {"input": n_input, "after_biz": n_biz, "after_gender": n_gender, "after_ai": n_ai}
+    }

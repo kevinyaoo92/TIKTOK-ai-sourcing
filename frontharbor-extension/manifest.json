@@ -1,8 +1,8 @@
 ﻿{
   "manifest_version": 3,
-  "name": "Frontharbor 找货助手 (POC-3A)",
-  "version": "0.3.0",
-  "description": "POC-3A：验证扩展能否读取 1688 详情页 window.context 数据。",
+  "name": "Frontharbor 找货助手 (POC-4)",
+  "version": "0.4.0",
+  "description": "POC-4：完整找货闭环。",
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "host_permissions": [
     "http://127.0.0.1:8123/*",
@@ -15,6 +15,6 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Frontharbor POC-3A"
+    "default_title": "Frontharbor POC-4"
   }
 }
