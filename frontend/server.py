@@ -317,6 +317,8 @@ def api_poc_task_pending() -> dict:
 def api_poc_task_complete(body: dict) -> dict:
     task_id = (body.get("task_id") or "").strip()
     success = bool(body.get("success", True))
+    payload = body.get("payload") or {}
+    error = body.get("error") or ""
     if not task_id:
         return {"status": "error", "error": "missing_task_id"}
     with _POC_LOCK:
@@ -325,8 +327,15 @@ def api_poc_task_complete(body: dict) -> dict:
             return {"status": "error", "error": "task_not_found"}
         t["task_status"] = "success" if success else "failed"
         t["completed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        t["payload"] = payload
+        t["error"] = error
         final_status = t["task_status"]
     print(f"[POC_TASK] completed task_id={task_id} status={final_status}", flush=True)
+    if payload:
+        n_items = len(payload.get("items") or [])
+        print(f"[POC_TASK] payload total_cards={payload.get('total')} items={n_items}", flush=True)
+    if error:
+        print(f"[POC_TASK] error={error[:120]}", flush=True)
     return {"status": "ok", "task_id": task_id, "task_status": final_status}
 
 

@@ -1,18 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Frontharbor 找货助手 (POC-1A)",
-  "version": "0.1.0",
-  "description": "POC-1A：验证扩展与 Frontharbor 后端的最小通信。",
-  "permissions": ["storage"],
+  "name": "Frontharbor 找货助手 (POC-2)",
+  "version": "0.2.0",
+  "description": "POC-2：验证扩展能否读取 1688 搜索结果页卡片。",
+  "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": [
     "http://127.0.0.1:8123/*",
-    "http://118.89.85.175/*"
+    "http://118.89.85.175/*",
+    "https://s.1688.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Frontharbor POC-1A"
+    "default_title": "Frontharbor POC-2"
   }
 }

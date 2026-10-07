@@ -1,7 +1,7 @@
 function render() {
-  chrome.storage.local.get(["lastTaskId", "lastStatus", "updatedAt"], function(d) {
+  chrome.storage.local.get(["lastStatus", "lastInfo", "updatedAt"], function(d) {
     document.getElementById("v-status").textContent = d.lastStatus || "idle";
-    document.getElementById("v-task-id").textContent = d.lastTaskId || "—";
+    document.getElementById("v-info").textContent = d.lastInfo || "—";
     document.getElementById("v-updated").textContent = d.updatedAt || "—";
   });
 }
