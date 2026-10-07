@@ -243,3 +243,38 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 
 ### 下一步
 - 按大纲进 Phase 3（Chrome Extension POC），或按用户决定跳过 Phase 2
+
+
+## POC 全阶段完成 2026-10-07 23:42
+
+### 完成内容
+- 阶段 0：supplier_finder.py 代码盘点（675 行，9 函数，10 常量）
+- 阶段 1A：扩展↔后端通信层（4 个 API + 测试页 + 扩展骨架）
+- 阶段 2：搜索结果页读取（标题/链接/回头率），3 次成功
+- 阶段 3A：详情页读取（MAIN world 读 window.context + DOM 兜底），7 次成功
+- 阶段 3B：单商品判断器（四档降级 + 硬淘汰），9 项边界通过
+- 阶段 4：完整找货闭环（GBK URL + 卡片过滤 + 逐个详情 + 四档降级），3 次连续成功
+
+### 关键技术结论
+- window.context 在扩展 MAIN world 可读，最高风险解除
+- [data-offer-grid-cell="true"] 选择器有效，旧 EXTRACT_CARDS_JS 可复用
+- 搜索 URL 必须用 GBK 编码（1688 特性，UTF-8 会乱码）
+- 三次完整跑都返回 1 个结果，命中"宽松"档
+
+### 提交
+- bce2786 POC-2
+- 2a91e8e POC-3A
+- a3f7021 POC-3B
+- 908eeec POC-4
+
+### 新增文件
+- app/analysis/poc_judge.py（单商品判断器 + 卡片过滤）
+- frontend/static/poc_test.html（测试页）
+- frontharbor-extension/（扩展 4 文件）
+
+### 未做（按专家方案）
+- AI 排序 / 价格排序 / 妙手 / 服务器 Playwright 生产化
+
+### 下一步
+- 提交专家验收
+- 等专家反馈决定是否进入 Phase 5 或正式上线扩展

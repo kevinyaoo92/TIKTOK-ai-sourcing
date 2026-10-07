@@ -35,26 +35,26 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-07 17:19
+# SESSION STATE — 2026-10-07 23:42
 ## 1. Git
 
 ```
+908eeec POC-4：完整找货闭环（GBK URL + 卡片层过滤 + 逐个详情 + 四档降级），连续 3 次成功
+a3f7021 POC-3B：单商品判断器（四档降级 + 硬性淘汰），9 项边界全部通过
+2a91e8e POC-3A：详情页数据读取（MAIN world 读 window.context + DOM 兜底），7 次成功
+bce2786 POC-2：扩展读 1688 搜索结果页卡片（标题/链接/回头率，3 次成功）
+852cd21 POC-1A：扩展↔后端通信层（4 个 API + 前端测试页 + 扩展骨架）
+e0aa98b POC 阶段：建立 POC_SPEC.md + 更新快照
 5b99401 状态更新：服务器同步 + 缓存修复上线 + 今日提交记录
 c04474f 修复缓存判据（161 个 L2 秒开）+ related_keywords 退出正式逻辑 + 删除建议定价/内容营销建议模块
 196becd 状态收尾：CURRENT_TASK 顶部重写 + SESSION_STATE 快照刷新
 071631d 状态文件补齐：找货入口占位 + 正式产品形态 + 已知未修 bug 记录
-0ff15a1 Phase 2：找货入口改为正式产品形态（找优质货源 + 会员弹窗 + confirm_find_supplier 埋点）
-ca95954 Phase 2：找货入口改回体验申请占位，新增 apply_experience 埋点
-1f7e3b5 收尾：Phase 2 埋点进度快照
-04f6bd6 Phase 2 埋点：user_events 表 + /api/track 接口 + 前端 5 处事件 + 导航返回修复
-17e7cca 收尾：快照更新 + PRODUCT_ROADMAP 战略决策入库
-934b03f 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
 
 ---
-?? _state/POC_SPEC.md
+ M _state/CURRENT_TASK.md
 
 ---
-* main 5b99401 [origin/main] 状态更新：服务器同步 + 缓存修复上线 + 今日提交记录
+* main 908eeec [origin/main] POC-4：完整找货闭环（GBK URL + 卡片层过滤 + 逐个详情 + 四档降级），连续 3 次成功
 
 ```
 ## 2. 数据库
@@ -319,6 +319,41 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 
 ### 下一步
 - 按大纲进 Phase 3（Chrome Extension POC），或按用户决定跳过 Phase 2
+
+
+## POC 全阶段完成 2026-10-07 23:42
+
+### 完成内容
+- 阶段 0：supplier_finder.py 代码盘点（675 行，9 函数，10 常量）
+- 阶段 1A：扩展↔后端通信层（4 个 API + 测试页 + 扩展骨架）
+- 阶段 2：搜索结果页读取（标题/链接/回头率），3 次成功
+- 阶段 3A：详情页读取（MAIN world 读 window.context + DOM 兜底），7 次成功
+- 阶段 3B：单商品判断器（四档降级 + 硬淘汰），9 项边界通过
+- 阶段 4：完整找货闭环（GBK URL + 卡片过滤 + 逐个详情 + 四档降级），3 次连续成功
+
+### 关键技术结论
+- window.context 在扩展 MAIN world 可读，最高风险解除
+- [data-offer-grid-cell="true"] 选择器有效，旧 EXTRACT_CARDS_JS 可复用
+- 搜索 URL 必须用 GBK 编码（1688 特性，UTF-8 会乱码）
+- 三次完整跑都返回 1 个结果，命中"宽松"档
+
+### 提交
+- bce2786 POC-2
+- 2a91e8e POC-3A
+- a3f7021 POC-3B
+- 908eeec POC-4
+
+### 新增文件
+- app/analysis/poc_judge.py（单商品判断器 + 卡片过滤）
+- frontend/static/poc_test.html（测试页）
+- frontharbor-extension/（扩展 4 文件）
+
+### 未做（按专家方案）
+- AI 排序 / 价格排序 / 妙手 / 服务器 Playwright 生产化
+
+### 下一步
+- 提交专家验收
+- 等专家反馈决定是否进入 Phase 5 或正式上线扩展
 
 ### OPEN_ISSUES.md
 
@@ -809,4 +844,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-07 17:19:31
+2026-10-07 23:42:16
