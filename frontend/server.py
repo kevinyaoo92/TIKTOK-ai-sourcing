@@ -41,6 +41,7 @@ from app.analysis import analyze_service  # noqa: E402
 from app.analysis import supplier_finder  # noqa: E402
 from app import user_usage  # noqa: E402
 from app import user_events  # noqa: E402
+from app.analysis import poc_judge  # noqa: E402
 import threading  # noqa: E402
 import uuid  # noqa: E402
 import time  # noqa: E402
@@ -284,6 +285,14 @@ def api_opportunity(key: str) -> dict:
 
 
 # ========== POC 任务 API（阶段 1A）==========
+def api_poc_judge(body: dict) -> dict:
+    """接收阶段 3A payload，运行判断器。"""
+    payload = body.get("payload") or {}
+    keyword = (body.get("keyword") or "").strip() or None
+    r = poc_judge.judge_single(payload, keyword)
+    return {"status": "ok", "judge": r}
+
+
 def api_poc_task_create(body: dict) -> dict:
     task_type = (body.get("task_type") or "ping").strip()
     keyword = (body.get("keyword") or "").strip() or None
@@ -483,6 +492,14 @@ class Handler(BaseHTTPRequestHandler):
                 opp_id = (body.get("opportunity_id") or "").strip() or None
                 r = user_events.record_event(MARKET_DB, anon, event, category, opp_id)
                 return self._json(r)
+            if path == "/api/poc_judge":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_judge(body))
             if path == "/api/poc_task/create":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"
