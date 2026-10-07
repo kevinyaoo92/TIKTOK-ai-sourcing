@@ -35,10 +35,12 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-06 11:26
+# SESSION STATE — 2026-10-07 10:32
 ## 1. Git
 
 ```
+c04474f 修复缓存判据（161 个 L2 秒开）+ related_keywords 退出正式逻辑 + 删除建议定价/内容营销建议模块
+196becd 状态收尾：CURRENT_TASK 顶部重写 + SESSION_STATE 快照刷新
 071631d 状态文件补齐：找货入口占位 + 正式产品形态 + 已知未修 bug 记录
 0ff15a1 Phase 2：找货入口改为正式产品形态（找优质货源 + 会员弹窗 + confirm_find_supplier 埋点）
 ca95954 Phase 2：找货入口改回体验申请占位，新增 apply_experience 埋点
@@ -47,28 +49,26 @@ ca95954 Phase 2：找货入口改回体验申请占位，新增 apply_experience
 17e7cca 收尾：快照更新 + PRODUCT_ROADMAP 战略决策入库
 934b03f 冻结服务器 Playwright 正式开发：标记 supplier_finder / miaoshou_collector 为内部验证资产
 cadbaa9 修复 /api/categories 类目文件路径：优先读项目内 app/data/，不再依赖 Desktop
-7926139 新增：进度 vs 产品经理大纲对照汇报
-09f5913 清理 OPEN_ISSUES.md 头部 P0：归档已解决项，重写当前阻塞
 
 ---
  M _state/CURRENT_TASK.md
 
 ---
-* main 071631d [origin/main] 状态文件补齐：找货入口占位 + 正式产品形态 + 已知未修 bug 记录
+* main c04474f [origin/main] 修复缓存判据（161 个 L2 秒开）+ related_keywords 退出正式逻辑 + 删除建议定价/内容营销建议模块
 
 ```
 ## 2. 数据库
 
 ```
 active_period = 2026-09
-  - ai_analysis_log: 2546 行
+  - ai_analysis_log: 2581 行
   - app_config: 1 行
   - category: 182 行
   - collection_batch: 182 行
   - keyword_metric: 28014 行
   - opportunity_analysis: 2493 行
   - sqlite_sequence: 5 行
-  - user_events: 34 行
+  - user_events: 60 行
   - user_usage: 3 行
 ```
 ## 3. _state 文件
@@ -301,6 +301,25 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 
 ### 搁置原因
 不频繁，且妙手正式执行层会搬到 Chrome Extension，这段逻辑会整体重写。
+
+
+## 服务器同步 + 缓存修复上线 2026-10-07 10:32
+
+### 本次完成
+- 修复缓存判据：161 个 L2 从"每次重跑 1-3 分钟"改为"9ms 秒开"
+  - 旧判据 len(rows) < expected 恒成立（过滤前 vs 过滤后口径不同）
+  - 新判据：rows 非空 + 至少一行 ai_summary 有内容
+- related_keywords 退出正式逻辑：前端不展示、搜索不匹配、AI prompt 不消费
+- 删除"建议定价"和"内容营销建议"两个前端模块
+- 服务器同步 3 个文件（deepseek.py / analyze_service.py / opportunity.html）
+- 服务器验证：缓存命中 9ms
+
+### 提交
+- c04474f（本地 + GitHub）
+
+### 下一步
+- 按大纲进 Phase 3（Chrome Extension POC），或按用户决定跳过 Phase 2
+
 ### OPEN_ISSUES.md
 
 # OPEN ISSUES — tiktok-ai-sourcing
@@ -790,4 +809,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-06 11:26:27
+2026-10-07 10:32:58

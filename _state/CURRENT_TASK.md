@@ -225,3 +225,21 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 
 ### 搁置原因
 不频繁，且妙手正式执行层会搬到 Chrome Extension，这段逻辑会整体重写。
+
+
+## 服务器同步 + 缓存修复上线 2026-10-07 10:32
+
+### 本次完成
+- 修复缓存判据：161 个 L2 从"每次重跑 1-3 分钟"改为"9ms 秒开"
+  - 旧判据 len(rows) < expected 恒成立（过滤前 vs 过滤后口径不同）
+  - 新判据：rows 非空 + 至少一行 ai_summary 有内容
+- related_keywords 退出正式逻辑：前端不展示、搜索不匹配、AI prompt 不消费
+- 删除"建议定价"和"内容营销建议"两个前端模块
+- 服务器同步 3 个文件（deepseek.py / analyze_service.py / opportunity.html）
+- 服务器验证：缓存命中 9ms
+
+### 提交
+- c04474f（本地 + GitHub）
+
+### 下一步
+- 按大纲进 Phase 3（Chrome Extension POC），或按用户决定跳过 Phase 2
