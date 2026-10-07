@@ -285,18 +285,22 @@ def api_opportunity(key: str) -> dict:
 
 # ========== POC 任务 API（阶段 1A）==========
 def api_poc_task_create(body: dict) -> dict:
-    keyword = (body.get("keyword") or "测试搜索词").strip()
+    task_type = (body.get("task_type") or "ping").strip()
+    keyword = (body.get("keyword") or "").strip() or None
+    offer_id = (body.get("offer_id") or "").strip() or None
     task_id = "poc-" + uuid.uuid4().hex[:12]
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     with _POC_LOCK:
         _POC_TASKS[task_id] = {
             "task_id": task_id,
+            "task_type": task_type,
             "keyword": keyword,
+            "offer_id": offer_id,
             "task_status": "pending",
             "created_at": now,
             "completed_at": None,
         }
-    print(f"[POC_TASK] created task_id={task_id} keyword={keyword!r}", flush=True)
+    print(f"[POC_TASK] created task_id={task_id} type={task_type} kw={keyword!r} oid={offer_id!r}", flush=True)
     return {"status": "ok", "task_id": task_id, "task_status": "pending"}
 
 
@@ -306,9 +310,12 @@ def api_poc_task_pending() -> dict:
             t = _POC_TASKS[tid]
             if t["task_status"] == "pending":
                 t["task_status"] = "running"
-                print(f"[POC_TASK] extension picked up task_id={tid}", flush=True)
+                print(f"[POC_TASK] extension picked up task_id={tid} type={t.get('task_type')}", flush=True)
                 return {"status": "ok", "task": {
-                    "task_id": tid, "keyword": t["keyword"],
+                    "task_id": tid,
+                    "task_type": t.get("task_type", "ping"),
+                    "keyword": t.get("keyword"),
+                    "offer_id": t.get("offer_id"),
                     "created_at": t["created_at"],
                 }}
     return {"status": "ok", "task": None}
@@ -333,7 +340,7 @@ def api_poc_task_complete(body: dict) -> dict:
     print(f"[POC_TASK] completed task_id={task_id} status={final_status}", flush=True)
     if payload:
         n_items = len(payload.get("items") or [])
-        print(f"[POC_TASK] payload total_cards={payload.get('total')} items={n_items}", flush=True)
+        print(f"[POC_TASK] payload keys={list(payload.keys())}", flush=True)
     if error:
         print(f"[POC_TASK] error={error[:120]}", flush=True)
     return {"status": "ok", "task_id": task_id, "task_status": final_status}
