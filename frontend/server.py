@@ -50,6 +50,10 @@ _FINDER_TASKS = {}       # task_id -> dict
 _FINDER_LOCK = threading.Lock()
 _FINDER_TTL = 1800       # 30 分钟后清理
 
+# ========== POC 任务管理（阶段 1A）==========
+_POC_TASKS = {}          # task_id -> dict
+_POC_LOCK = threading.Lock()
+
 
 def _run_finder_task(task_id, keyword):
     def on_progress(pct, phase, extra):
@@ -279,6 +283,63 @@ def api_opportunity(key: str) -> dict:
         conn.close()
 
 
+# ========== POC 任务 API（阶段 1A）==========
+def api_poc_task_create(body: dict) -> dict:
+    keyword = (body.get("keyword") or "测试搜索词").strip()
+    task_id = "poc-" + uuid.uuid4().hex[:12]
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    with _POC_LOCK:
+        _POC_TASKS[task_id] = {
+            "task_id": task_id,
+            "keyword": keyword,
+            "task_status": "pending",
+            "created_at": now,
+            "completed_at": None,
+        }
+    print(f"[POC_TASK] created task_id={task_id} keyword={keyword!r}", flush=True)
+    return {"status": "ok", "task_id": task_id, "task_status": "pending"}
+
+
+def api_poc_task_pending() -> dict:
+    with _POC_LOCK:
+        for tid in list(_POC_TASKS.keys()):
+            t = _POC_TASKS[tid]
+            if t["task_status"] == "pending":
+                t["task_status"] = "running"
+                print(f"[POC_TASK] extension picked up task_id={tid}", flush=True)
+                return {"status": "ok", "task": {
+                    "task_id": tid, "keyword": t["keyword"],
+                    "created_at": t["created_at"],
+                }}
+    return {"status": "ok", "task": None}
+
+
+def api_poc_task_complete(body: dict) -> dict:
+    task_id = (body.get("task_id") or "").strip()
+    success = bool(body.get("success", True))
+    if not task_id:
+        return {"status": "error", "error": "missing_task_id"}
+    with _POC_LOCK:
+        t = _POC_TASKS.get(task_id)
+        if not t:
+            return {"status": "error", "error": "task_not_found"}
+        t["task_status"] = "success" if success else "failed"
+        t["completed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        final_status = t["task_status"]
+    print(f"[POC_TASK] completed task_id={task_id} status={final_status}", flush=True)
+    return {"status": "ok", "task_id": task_id, "task_status": final_status}
+
+
+def api_poc_task_status(task_id: str) -> dict:
+    if not task_id:
+        return {"status": "error", "error": "missing_task_id"}
+    with _POC_LOCK:
+        t = _POC_TASKS.get(task_id)
+        if not t:
+            return {"status": "error", "error": "task_not_found"}
+        return {"status": "ok", "task": dict(t)}
+
+
 def api_analyze(body: dict) -> dict:
     """POST /api/analyze：真实数据分析链路（tiktok_market.db + analyze_service）。
 
@@ -373,6 +434,11 @@ class Handler(BaseHTTPRequestHandler):
                 row = cur.execute("SELECT value FROM app_config WHERE key='active_period'").fetchone()
                 con.close()
                 return self._json({"period": row[0] if row else ""})
+            if path == "/api/poc_task/pending":
+                return self._json(api_poc_task_pending())
+            if path == "/api/poc_task/status":
+                task_id = qs.get("task_id", [""])[0]
+                return self._json(api_poc_task_status(task_id))
             if path == "/api/miaoshou_check_login":
                 from app.analysis import miaoshou_collector
                 return self._json(miaoshou_collector.check_login())
@@ -401,6 +467,22 @@ class Handler(BaseHTTPRequestHandler):
                 opp_id = (body.get("opportunity_id") or "").strip() or None
                 r = user_events.record_event(MARKET_DB, anon, event, category, opp_id)
                 return self._json(r)
+            if path == "/api/poc_task/create":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_task_create(body))
+            if path == "/api/poc_task/complete":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_task_complete(body))
             if path == "/api/analyze":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"

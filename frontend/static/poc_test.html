@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>POC-1A 通信测试</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 640px; margin: 40px auto; padding: 20px; color: #222; }
+h1 { font-size: 20px; }
+button { font-size: 15px; padding: 10px 22px; cursor: pointer; border-radius: 6px; border: 1px solid #0066cc; background: #0066cc; color: #fff; }
+button:hover { background: #0055aa; }
+.status { margin-top: 20px; padding: 16px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
+.row { margin: 6px 0; font-size: 14px; }
+.label { color: #888; display: inline-block; width: 100px; }
+.status-pending { color: #888; }
+.status-running { color: #0066cc; }
+.status-success { color: #009900; font-weight: bold; }
+.status-failed { color: #cc0000; font-weight: bold; }
+.note { color: #888; font-size: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>POC-1A 通信测试</h1>
+<p>点击按钮创建任务，扩展会自动拾取并回报成功。</p>
+<button id="btn-create">创建测试任务</button>
+
+<div class="status">
+  <div class="row"><span class="label">状态：</span><span id="st-status" class="status-pending">未开始</span></div>
+  <div class="row"><span class="label">task_id：</span><span id="st-task-id">—</span></div>
+  <div class="row"><span class="label">搜索词：</span><span id="st-keyword">—</span></div>
+  <div class="row"><span class="label">创建时间：</span><span id="st-created">—</span></div>
+  <div class="row"><span class="label">完成时间：</span><span id="st-completed">—</span></div>
+</div>
+
+<div class="note">阶段 1A 只验证通信，不触发 1688 找货。</div>
+
+<script>
+var currentTaskId = null;
+var pollTimer = null;
+
+function setStatus(text, cls) {
+  var el = document.getElementById("st-status");
+  el.textContent = text;
+  el.className = cls;
+}
+
+function renderTask(t) {
+  document.getElementById("st-task-id").textContent = t.task_id || "—";
+  document.getElementById("st-keyword").textContent = t.keyword || "—";
+  document.getElementById("st-created").textContent = t.created_at || "—";
+  document.getElementById("st-completed").textContent = t.completed_at || "—";
+  var s = t.task_status;
+  if (s === "pending") setStatus("待执行", "status-pending");
+  else if (s === "running") setStatus("执行中", "status-running");
+  else if (s === "success") setStatus("成功", "status-success");
+  else if (s === "failed") setStatus("失败", "status-failed");
+}
+
+function pollStatus() {
+  if (!currentTaskId) return;
+  fetch("/api/poc_task/status?task_id=" + encodeURIComponent(currentTaskId))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.status === "ok" && d.task) {
+        renderTask(d.task);
+        if (d.task.task_status === "success" || d.task.task_status === "failed") {
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+      }
+    }).catch(function(){});
+}
+
+document.getElementById("btn-create").addEventListener("click", function() {
+  var kw = "电钻";
+  fetch("/api/poc_task/create", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({keyword: kw})
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.status !== "ok") { alert("创建失败: " + JSON.stringify(d)); return; }
+      currentTaskId = d.task_id;
+      setStatus("待执行", "status-pending");
+      document.getElementById("st-task-id").textContent = d.task_id;
+      document.getElementById("st-keyword").textContent = kw;
+      document.getElementById("st-created").textContent = "刚刚";
+      document.getElementById("st-completed").textContent = "—";
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(pollStatus, 1000);
+      pollStatus();
+    }).catch(function(e){ alert("请求失败: " + e.message); });
+});
+</script>
+</body>
+</html>
