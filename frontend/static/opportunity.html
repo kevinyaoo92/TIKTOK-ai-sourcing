@@ -601,12 +601,9 @@
       fetch("/api/miaoshou_open_login", {method: "POST"});
     }
 
-    document.addEventListener("visibilitychange", function() {
-      if (document.visibilityState !== "visible") return;
-      var modal = document.getElementById("finder-modal");
-      if (!modal || modal.classList.contains("hidden")) return;
-      checkMiaoshouLogin();
-    });
+    // [2026-10-08] 移除 visibilitychange → checkMiaoshouLogin 监听。
+    // 原因：该监听原为找货结果页服务；且会被会员弹窗误触发，导致意外启动服务器 Playwright Chrome。
+    // 妙手正式执行层将在 Chrome Extension 中实现。checkMiaoshouLogin 函数保留备用。
 
     function getFinderEl() { return document.getElementById("finder-modal"); }
     function getFinderBody() { return document.getElementById("finder-body"); }
