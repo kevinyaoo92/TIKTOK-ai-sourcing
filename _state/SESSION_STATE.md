@@ -35,26 +35,25 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-07 23:42
+# SESSION STATE — 2026-10-08 21:55
 ## 1. Git
 
 ```
+8b4091f 生产部署阻塞修复：task_id 熵增强到 128bit + 扩展 BACKEND 切生产地址
+2f4c64a 修复：找货失败提示改中文，兜底 '找货失败，请稍后再试'
+ebc804f 新增扩展安装说明 README
+31ab5fd 埋点扩展：补 6 个找货漏斗事件（created/success/failed/timeout/cancelled/1688_click）
+d85f5d1 修复：移除 visibilitychange → checkMiaoshouLogin 监听（误触发弹空白 Chrome）
+405d20f 上线前审计修复：并发防护 + 关闭清 timer + F5 恢复 + 删测试页 + 扩展改名
+9347e3d 接入正式闭环：找优质货源 → 扩展执行 → 弹窗展示 1~3 个货源（带图 + 起订量）
+c5de660 收尾：POC 全阶段完成记录 + 快照更新
 908eeec POC-4：完整找货闭环（GBK URL + 卡片层过滤 + 逐个详情 + 四档降级），连续 3 次成功
 a3f7021 POC-3B：单商品判断器（四档降级 + 硬性淘汰），9 项边界全部通过
-2a91e8e POC-3A：详情页数据读取（MAIN world 读 window.context + DOM 兜底），7 次成功
-bce2786 POC-2：扩展读 1688 搜索结果页卡片（标题/链接/回头率，3 次成功）
-852cd21 POC-1A：扩展↔后端通信层（4 个 API + 前端测试页 + 扩展骨架）
-e0aa98b POC 阶段：建立 POC_SPEC.md + 更新快照
-5b99401 状态更新：服务器同步 + 缓存修复上线 + 今日提交记录
-c04474f 修复缓存判据（161 个 L2 秒开）+ related_keywords 退出正式逻辑 + 删除建议定价/内容营销建议模块
-196becd 状态收尾：CURRENT_TASK 顶部重写 + SESSION_STATE 快照刷新
-071631d 状态文件补齐：找货入口占位 + 正式产品形态 + 已知未修 bug 记录
 
 ---
- M _state/CURRENT_TASK.md
-
+(clean)
 ---
-* main 908eeec [origin/main] POC-4：完整找货闭环（GBK URL + 卡片层过滤 + 逐个详情 + 四档降级），连续 3 次成功
+* main 8b4091f [origin/main] 生产部署阻塞修复：task_id 熵增强到 128bit + 扩展 BACKEND 切生产地址
 
 ```
 ## 2. 数据库
@@ -68,7 +67,7 @@ active_period = 2026-09
   - keyword_metric: 28014 行
   - opportunity_analysis: 2493 行
   - sqlite_sequence: 5 行
-  - user_events: 60 行
+  - user_events: 138 行
   - user_usage: 3 行
 ```
 ## 3. _state 文件
@@ -844,4 +843,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-07 23:42:16
+2026-10-08 21:55:06
