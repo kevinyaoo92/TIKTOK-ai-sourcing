@@ -378,6 +378,21 @@ def api_poc_task_complete(body: dict) -> dict:
     return {"status": "ok", "task_id": task_id, "task_status": final_status}
 
 
+def api_poc_task_cancel(body: dict) -> dict:
+    task_id = (body.get("task_id") or "").strip()
+    if not task_id:
+        return {"status": "error", "error": "missing_task_id"}
+    with _POC_LOCK:
+        t = _POC_TASKS.get(task_id)
+        if not t:
+            return {"status": "error", "error": "task_not_found"}
+        if t["task_status"] in ("pending", "running"):
+            t["task_status"] = "cancelled"
+            t["completed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[POC_TASK] cancelled task_id={task_id}", flush=True)
+    return {"status": "ok", "task_id": task_id}
+
+
 def api_poc_task_status(task_id: str) -> dict:
     if not task_id:
         return {"status": "error", "error": "missing_task_id"}
@@ -547,6 +562,14 @@ class Handler(BaseHTTPRequestHandler):
                 except json.JSONDecodeError:
                     return self._json({"status": "error", "error": "bad_json"}, 400)
                 return self._json(api_poc_task_create(body))
+            if path == "/api/poc_task/cancel":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_task_cancel(body))
             if path == "/api/poc_task/complete":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"

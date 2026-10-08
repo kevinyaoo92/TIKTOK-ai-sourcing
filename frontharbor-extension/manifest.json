@@ -1,8 +1,8 @@
 ﻿{
   "manifest_version": 3,
-  "name": "Frontharbor 找货助手 (POC-4)",
+  "name": "Frontharbor 找货助手",
   "version": "0.4.0",
-  "description": "POC-4：完整找货闭环。",
+  "description": "在您自己的 1688 账号下自动寻找优质货源，结果回传 Frontharbor。",
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "host_permissions": [
     "http://127.0.0.1:8123/*",
@@ -15,6 +15,6 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Frontharbor POC-4"
+    "default_title": "Frontharbor 找货助手"
   }
 }

@@ -732,6 +732,37 @@
       if (FINDER.timer) { clearInterval(FINDER.timer); FINDER.timer = null; }
       FINDER.taskId = null;
       FINDER.currentOppId = null;
+      if (FIND_SRC.timer) { clearInterval(FIND_SRC.timer); FIND_SRC.timer = null; }
+      if (FIND_SRC.taskId) {
+        fetch("/api/poc_task/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_id: FIND_SRC.taskId })
+        }).catch(function () {});
+        FIND_SRC.taskId = null;
+      }
+      FIND_SRC.oppId = null;
+      try { localStorage.removeItem("frontharbor_find_task"); } catch (e) {}
+    }
+
+    function restoreFindTaskFromStorage() {
+      try {
+        var raw = localStorage.getItem("frontharbor_find_task");
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        if (!data || !data.taskId) { localStorage.removeItem("frontharbor_find_task"); return; }
+        var elapsed = Date.now() - (data.startedAt || 0);
+        if (elapsed > 120000) { localStorage.removeItem("frontharbor_find_task"); return; }
+        var modal = getFinderEl();
+        if (!modal) return;
+        FIND_SRC.taskId = data.taskId;
+        FIND_SRC.startedAt = data.startedAt || Date.now();
+        FIND_SRC.oppId = data.oppId || null;
+        renderFindProgress("正在恢复找货任务...");
+        modal.classList.remove("hidden");
+        FIND_SRC.timer = setInterval(pollFindSource, 2000);
+        pollFindSource();
+      } catch (e) {}
     }
 
     function pollFinderTask() {
@@ -862,6 +893,7 @@
 
     function stopFindSourcePoll() {
       if (FIND_SRC.timer) { clearInterval(FIND_SRC.timer); FIND_SRC.timer = null; }
+      try { localStorage.removeItem("frontharbor_find_task"); } catch (e) {}
     }
 
     function pollFindSource() {
@@ -874,6 +906,15 @@
           var elapsed = Date.now() - FIND_SRC.startedAt;
           if (t.task_status === "pending" && elapsed > 60000) {
             stopFindSourcePoll();
+            var stuckTaskId = FIND_SRC.taskId;
+            FIND_SRC.taskId = null;
+            if (stuckTaskId) {
+              fetch("/api/poc_task/cancel", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task_id: stuckTaskId })
+              }).catch(function () {});
+            }
             renderFindError("未检测到浏览器助手响应。请确认已安装 Frontharbor 浏览器助手，并保持 1688 已登录。");
             return;
           }
@@ -883,12 +924,14 @@
           }
           if (t.task_status === "success") {
             stopFindSourcePoll();
+            FIND_SRC.taskId = null;
             var payload = t.payload || {};
             renderFindResults(payload.results || [], payload.tier_used || null);
             return;
           }
           if (t.task_status === "failed") {
             stopFindSourcePoll();
+            FIND_SRC.taskId = null;
             var p2 = t.payload || {};
             var reason = t.error || "任务执行失败";
             if (p2.error === "no_cards_after_filter") reason = "搜索结果被过滤后无候选商品";
@@ -897,11 +940,20 @@
             renderFindError(reason);
             return;
           }
+          if (t.task_status === "cancelled") {
+            stopFindSourcePoll();
+            FIND_SRC.taskId = null;
+            return;
+          }
         })
         .catch(function () { /* 静默重试 */ });
     }
 
     function startFindSource(oppId) {
+      if (FIND_SRC.taskId) {
+        showToast("已有找货任务进行中，请稍候");
+        return;
+      }
       var opp = null;
       for (var i = 0; i < STATE.opportunities.length; i++) {
         if (STATE.opportunities[i].id === oppId) { opp = STATE.opportunities[i]; break; }
@@ -922,6 +974,7 @@
         .then(function (d) {
           if (!d || d.status !== "ok") { renderFindError("创建任务失败"); return; }
           FIND_SRC.taskId = d.task_id;
+          try { localStorage.setItem("frontharbor_find_task", JSON.stringify({taskId: d.task_id, startedAt: FIND_SRC.startedAt, oppId: FIND_SRC.oppId})); } catch (e) {}
           renderFindProgress("已下发任务，等待浏览器助手拾取...");
           FIND_SRC.timer = setInterval(pollFindSource, 2000);
           pollFindSource();
@@ -1427,6 +1480,7 @@
       // 交互初始化失败时，保留静态骨架，仍可阅读
       document.body.classList.add("bg-slate-50");
     }
+    setTimeout(restoreFindTaskFromStorage, 500);
   })();
   </script>
 
