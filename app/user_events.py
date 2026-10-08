@@ -26,6 +26,12 @@ ALLOWED_EVENTS = {
     "contact_submit",
     "apply_experience",
     "confirm_find_supplier",
+    "find_task_created",
+    "find_task_success",
+    "find_task_failed",
+    "find_task_timeout",
+    "find_task_cancelled",
+    "find_1688_click",
 }
 
 

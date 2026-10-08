@@ -731,6 +731,7 @@
       FINDER.currentOppId = null;
       if (FIND_SRC.timer) { clearInterval(FIND_SRC.timer); FIND_SRC.timer = null; }
       if (FIND_SRC.taskId) {
+        track("find_task_cancelled", { opportunity_id: FIND_SRC.oppId });
         fetch("/api/poc_task/cancel", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -873,7 +874,7 @@
             '</div>' +
           '</div>' +
           '<div class="flex flex-col gap-2 shrink-0 self-center">' +
-            '<a href="' + esc(x.link) + '" target="_blank" rel="noopener" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand hover:text-brand whitespace-nowrap text-center no-underline">1688货源</a>' +
+            '<a href="' + esc(x.link) + '" target="_blank" rel="noopener" data-1688-link="' + esc(x.offer_id || "") + '" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand hover:text-brand whitespace-nowrap text-center no-underline">1688货源</a>' +
           '</div>' +
         '</div>';
       }).join("");
@@ -903,6 +904,7 @@
           var elapsed = Date.now() - FIND_SRC.startedAt;
           if (t.task_status === "pending" && elapsed > 60000) {
             stopFindSourcePoll();
+            track("find_task_timeout", { opportunity_id: FIND_SRC.oppId });
             var stuckTaskId = FIND_SRC.taskId;
             FIND_SRC.taskId = null;
             if (stuckTaskId) {
@@ -923,12 +925,14 @@
             stopFindSourcePoll();
             FIND_SRC.taskId = null;
             var payload = t.payload || {};
+            track("find_task_success", { opportunity_id: FIND_SRC.oppId });
             renderFindResults(payload.results || [], payload.tier_used || null);
             return;
           }
           if (t.task_status === "failed") {
             stopFindSourcePoll();
             FIND_SRC.taskId = null;
+            track("find_task_failed", { opportunity_id: FIND_SRC.oppId });
             var p2 = t.payload || {};
             var reason = t.error || "任务执行失败";
             if (p2.error === "no_cards_after_filter") reason = "搜索结果被过滤后无候选商品";
@@ -972,6 +976,7 @@
           if (!d || d.status !== "ok") { renderFindError("创建任务失败"); return; }
           FIND_SRC.taskId = d.task_id;
           try { localStorage.setItem("frontharbor_find_task", JSON.stringify({taskId: d.task_id, startedAt: FIND_SRC.startedAt, oppId: FIND_SRC.oppId})); } catch (e) {}
+          track("find_task_created", { opportunity_id: FIND_SRC.oppId });
           renderFindProgress("已下发任务，等待浏览器助手拾取...");
           FIND_SRC.timer = setInterval(pollFindSource, 2000);
           pollFindSource();
@@ -1234,6 +1239,11 @@
     });
 
     document.addEventListener("click", function (ev) {
+      var l1688 = ev.target.closest("[data-1688-link]");
+      if (l1688) {
+        track("find_1688_click", { opportunity_id: FIND_SRC.oppId });
+        return;
+      }
       var s1688 = ev.target.closest("[data-search-1688]");
       if (s1688) {
         track("search_1688_click", { category: STATE.selection ? STATE.selection.level1 : null });
