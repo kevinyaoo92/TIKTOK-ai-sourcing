@@ -934,10 +934,15 @@
             FIND_SRC.taskId = null;
             track("find_task_failed", { opportunity_id: FIND_SRC.oppId });
             var p2 = t.payload || {};
-            var reason = t.error || "任务执行失败";
-            if (p2.error === "no_cards_after_filter") reason = "搜索结果被过滤后无候选商品";
-            else if (p2.error === "no_cards") reason = "1688 未返回搜索结果";
-            else if (p2.error === "build_search_url_failed") reason = "搜索词编码失败";
+            var rawErr = (t.error || "") + " | " + (p2.error || "");
+            var reason = "找货失败，请稍后再试。";
+            if (rawErr.indexOf("no results after all tiers") >= 0) reason = "未找到符合质量标准的货源，建议换一个商品机会试试。";
+            else if (rawErr.indexOf("no_cards_after_filter") >= 0) reason = "搜索结果被过滤后无候选商品，建议换一个商品机会试试。";
+            else if (rawErr.indexOf("no_cards") >= 0) reason = "1688 未返回搜索结果。";
+            else if (rawErr.indexOf("build_search_url_failed") >= 0) reason = "搜索词编码失败。";
+            else if (rawErr.indexOf("open_search_failed") >= 0) reason = "1688 搜索页打开失败，请检查 1688 登录状态。";
+            else if (rawErr.indexOf("open_detail_failed") >= 0) reason = "1688 商品详情页打开失败。";
+            else if (rawErr.indexOf("unknown task_type") >= 0) reason = "任务类型异常，请联系 Frontharbor 团队。";
             renderFindError(reason);
             return;
           }
