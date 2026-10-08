@@ -1,5 +1,9 @@
 ﻿// POC-4: 完整闭环（搜索→卡片过滤→逐个详情→四档降级→最多3个）
-const BACKEND = "http://127.0.0.1:8123";
+// ========== 环境配置 ==========
+// 生产环境（发布给真实用户时使用）：
+const BACKEND = "http://118.89.85.175";
+// 本地调试时改用下面这行（注释掉上行）：
+// const BACKEND = "http://127.0.0.1:8123";
 const POLL_MS = 2000;
 const SEARCH_URL = "https://s.1688.com/selloffer/offer_search.htm?keywords=";
 const DETAIL_URL = "https://detail.1688.com/offer/";

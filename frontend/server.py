@@ -320,7 +320,7 @@ def api_poc_task_create(body: dict) -> dict:
     task_type = (body.get("task_type") or "ping").strip()
     keyword = (body.get("keyword") or "").strip() or None
     offer_id = (body.get("offer_id") or "").strip() or None
-    task_id = "poc-" + uuid.uuid4().hex[:12]
+    task_id = "task-" + uuid.uuid4().hex  # 32 hex chars = 128-bit entropy
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     with _POC_LOCK:
         _POC_TASKS[task_id] = {
