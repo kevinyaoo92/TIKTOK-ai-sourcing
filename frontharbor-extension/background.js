@@ -223,7 +223,7 @@ async function backendJudge(payload, keyword) {
 async function runFullTask(task) {
   const keyword = task.keyword;
   const diag = { keyword: keyword, cards_raw: 0, filter_stats: {}, details_checked: 0,
-                 rejects: {}, final: [], tier_used: null };
+                 rejects: {}, final: [], tier_used: null, audit: [] };
   const searchUrl = await backendSearchUrl(keyword);
   if (!searchUrl) { diag.error = "build_search_url_failed"; return { diag: diag, results: [] }; }
   let pageTab = await openAndWait(searchUrl);
@@ -255,11 +255,26 @@ async function runFullTask(task) {
     detailCount++;
     const payload = { main: mainR, dom: domR, offer_id: c.offer_id, url: DETAIL_URL + c.offer_id + ".html" };
     const jr = await backendJudge(payload, keyword);
+    diag.audit.push({
+      seq: i + 1,
+      offer_id: c.offer_id,
+      title: (domR.title || c.title || "").slice(0, 80),
+      rate: domR.rate,
+      rate24: domR.rate24,
+      min_stock: (mainR.min_stock != null ? mainR.min_stock : domR.min_stock),
+      moq: domR.moq,
+      sku_dims: mainR.dims || {},
+      judge_result: jr.result,
+      judge_tier: jr.tier,
+      judge_reason: jr.reason || "",
+      attempts: jr.attempts || []
+    });
     if (jr.result === "pass") {
       buckets[jr.tier].push({
         offer_id: c.offer_id,
         title: domR.title || c.title,
         link: DETAIL_URL + c.offer_id + ".html",
+        img: c.img || "",
         price: c.price,
         shop_name: c.shop_name,
         rate: domR.rate,

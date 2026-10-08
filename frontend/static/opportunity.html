@@ -773,6 +773,162 @@
       modal.classList.remove("hidden");
     }
 
+    var FIND_SRC = { taskId: null, timer: null, startedAt: 0, oppId: null };
+
+    function pickSearchTerm(opp) {
+      var terms = opp.searchTerms1688;
+      if (typeof terms === "string") { try { terms = JSON.parse(terms); } catch (e) { terms = []; } }
+      if (!Array.isArray(terms)) terms = [];
+      if (terms.length > 0 && String(terms[0]).trim()) return String(terms[0]).trim();
+      var kw = (opp.name || "").trim();
+      if (kw) return kw.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+      return (opp.keywordCn || opp.keyword || "").trim();
+    }
+
+    function renderFindProgress(text) {
+      var body = getFinderBody();
+      if (!body) return;
+      body.innerHTML =
+        '<div class="text-center py-10">' +
+          '<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-light mb-4">' +
+            '<svg class="finder-spinner w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24">' +
+              '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+              '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>' +
+            '</svg>' +
+          '</div>' +
+          '<h3 class="text-lg font-semibold text-slate-800 mb-2">正在为你寻找优质货源</h3>' +
+          '<p class="text-sm text-slate-500 mb-2">' + esc(text || "已下发任务给浏览器助手...") + '</p>' +
+          '<p class="text-xs text-slate-400">请保持浏览器助手已安装且 1688 已登录</p>' +
+        '</div>';
+    }
+
+    function renderFindError(msg) {
+      var body = getFinderBody();
+      if (!body) return;
+      body.innerHTML =
+        '<div class="text-center py-8">' +
+          '<div class="text-4xl mb-3">⚠️</div>' +
+          '<h3 class="text-lg font-semibold text-slate-800 mb-2">找货未完成</h3>' +
+          '<p class="text-sm text-slate-500 mb-6">' + esc(msg) + '</p>' +
+          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+        '</div>';
+    }
+
+    function renderFindResults(results, tier) {
+      var body = getFinderBody();
+      if (!body) return;
+      if (!results || results.length === 0) {
+        renderFindError("未找到符合条件的货源。");
+        return;
+      }
+      var cards = results.map(function (x) {
+        var imgHtml = x.img
+          ? '<div class="w-28 h-28 rounded-lg overflow-hidden bg-white shrink-0 border border-slate-100"><img src="' + esc(x.img) + '" class="block w-full h-full object-cover" referrerpolicy="no-referrer" onerror="this.style.display=' + "'none'" + '"></div>'
+          : '<div class="w-28 h-28 rounded-lg bg-slate-50 shrink-0 border border-slate-100 flex items-center justify-center text-slate-300 text-xs">无图</div>';
+        var skuText = "";
+        var dims = x.sku_dimensions || {};
+        var dimKeys = Object.keys(dims);
+        if (dimKeys.length === 1) skuText = dimKeys[0] + " " + dims[dimKeys[0]];
+        else if (dimKeys.length > 1) skuText = dimKeys.map(function (k) { return k + " " + dims[k]; }).join(" / ");
+        return '<div class="border border-slate-200 rounded-xl p-4 mb-4 flex gap-4 hover:shadow-md transition-shadow bg-white">' +
+          imgHtml +
+          '<div class="flex-1 min-w-0">' +
+            '<div class="font-medium text-slate-800 mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + esc(x.title || "（无标题）") + '</div>' +
+            '<div class="text-xs text-slate-500 mb-2">' + esc(x.shop_name || "") + (x.price ? ' | ' + esc(x.price) : "") + '</div>' +
+            '<div class="space-y-1 text-xs text-slate-600">' +
+              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>优质商家</div>' +
+              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>回头率 ' + (x.rate != null ? x.rate + '%' : '—') + '</div>' +
+              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>24h 揽收 ' + (x.rate24 != null ? x.rate24 + '%' : '—') + '</div>' +
+              (x.min_stock != null ? '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>库存 ' + x.min_stock + '</div>' : '') +
+              (skuText ? '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>SKU ' + esc(skuText) + '</div>' : '') +
+              (x.moq != null ? '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>起订量 ' + x.moq + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="flex flex-col gap-2 shrink-0 self-center">' +
+            '<a href="' + esc(x.link) + '" target="_blank" rel="noopener" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand hover:text-brand whitespace-nowrap text-center no-underline">1688货源</a>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      body.innerHTML =
+        '<div class="mb-5 pb-4 border-b border-slate-100">' +
+          '<h3 class="text-lg font-semibold text-slate-800">找到 ' + results.length + ' 个优质货源</h3>' +
+        '</div>' +
+        '<div>' + cards + '</div>' +
+        '<div class="text-center pt-4">' +
+          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+        '</div>';
+    }
+
+    function stopFindSourcePoll() {
+      if (FIND_SRC.timer) { clearInterval(FIND_SRC.timer); FIND_SRC.timer = null; }
+    }
+
+    function pollFindSource() {
+      if (!FIND_SRC.taskId) return;
+      fetch("/api/poc_task/status?task_id=" + encodeURIComponent(FIND_SRC.taskId))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || d.status !== "ok" || !d.task) return;
+          var t = d.task;
+          var elapsed = Date.now() - FIND_SRC.startedAt;
+          if (t.task_status === "pending" && elapsed > 60000) {
+            stopFindSourcePoll();
+            renderFindError("未检测到浏览器助手响应。请确认已安装 Frontharbor 浏览器助手，并保持 1688 已登录。");
+            return;
+          }
+          if (t.task_status === "running") {
+            renderFindProgress("扩展正在 1688 上执行找货，请稍候...");
+            return;
+          }
+          if (t.task_status === "success") {
+            stopFindSourcePoll();
+            var payload = t.payload || {};
+            renderFindResults(payload.results || [], payload.tier_used || null);
+            return;
+          }
+          if (t.task_status === "failed") {
+            stopFindSourcePoll();
+            var p2 = t.payload || {};
+            var reason = t.error || "任务执行失败";
+            if (p2.error === "no_cards_after_filter") reason = "搜索结果被过滤后无候选商品";
+            else if (p2.error === "no_cards") reason = "1688 未返回搜索结果";
+            else if (p2.error === "build_search_url_failed") reason = "搜索词编码失败";
+            renderFindError(reason);
+            return;
+          }
+        })
+        .catch(function () { /* 静默重试 */ });
+    }
+
+    function startFindSource(oppId) {
+      var opp = null;
+      for (var i = 0; i < STATE.opportunities.length; i++) {
+        if (STATE.opportunities[i].id === oppId) { opp = STATE.opportunities[i]; break; }
+      }
+      if (!opp) { showToast("未找到该机会"); return; }
+      var kw = pickSearchTerm(opp);
+      if (!kw) { showToast("该机会没有可用的搜索词"); return; }
+      FIND_SRC.oppId = oppId;
+      FIND_SRC.taskId = null;
+      FIND_SRC.startedAt = Date.now();
+      stopFindSourcePoll();
+      renderFindProgress("正在创建找货任务...");
+      fetch("/api/poc_task/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task_type: "find_full", keyword: kw })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || d.status !== "ok") { renderFindError("创建任务失败"); return; }
+          FIND_SRC.taskId = d.task_id;
+          renderFindProgress("已下发任务，等待浏览器助手拾取...");
+          FIND_SRC.timer = setInterval(pollFindSource, 2000);
+          pollFindSource();
+        })
+        .catch(function (e) { renderFindError("请求失败：" + (e.message || "")); });
+    }
+
     function openFinderModal(oppId) {
       // 防抖：模态层已经打开就不响应
       var modal = getFinderEl();
@@ -1058,11 +1214,7 @@
         var cfid = cfs.getAttribute("data-opp-id");
         var cfcat = STATE.selection ? STATE.selection.level1 : null;
         track("confirm_find_supplier", { opportunity_id: cfid, category: cfcat });
-        showToast("找货功能正在准备中，敬请期待。");
-        // TODO(Phase 4): 接入自动找货执行逻辑
-        //   现有 Playwright 实现位于 openFinderModal() + POST /api/find_suppliers
-        //   正式上线替换为 Chrome Extension 通道或启用已冻结的服务器 Playwright
-        // closeFinderModal();  // 视产品需要决定是否关闭
+        startFindSource(cfid);
         return;
       }
       var cf = ev.target.closest("[data-action='close-finder']");
