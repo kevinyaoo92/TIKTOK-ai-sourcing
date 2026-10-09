@@ -35,10 +35,13 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-08 21:55
+# SESSION STATE — 2026-10-09 11:53
 ## 1. Git
 
 ```
+0792832 妙手采集 POC：扩展 miaoshou_collect 任务类型（登录检测 + 采集页注入 + 成功判定）
+e3641bd 埋点补全：supplier_task_picked / supplier_result_view / supplier_result_click + task_id 链路串联
+0fed0bf 收尾：v0.1.1-realuser 生产部署完成
 8b4091f 生产部署阻塞修复：task_id 熵增强到 128bit + 扩展 BACKEND 切生产地址
 2f4c64a 修复：找货失败提示改中文，兜底 '找货失败，请稍后再试'
 ebc804f 新增扩展安装说明 README
@@ -46,14 +49,11 @@ ebc804f 新增扩展安装说明 README
 d85f5d1 修复：移除 visibilitychange → checkMiaoshouLogin 监听（误触发弹空白 Chrome）
 405d20f 上线前审计修复：并发防护 + 关闭清 timer + F5 恢复 + 删测试页 + 扩展改名
 9347e3d 接入正式闭环：找优质货源 → 扩展执行 → 弹窗展示 1~3 个货源（带图 + 起订量）
-c5de660 收尾：POC 全阶段完成记录 + 快照更新
-908eeec POC-4：完整找货闭环（GBK URL + 卡片层过滤 + 逐个详情 + 四档降级），连续 3 次成功
-a3f7021 POC-3B：单商品判断器（四档降级 + 硬性淘汰），9 项边界全部通过
 
 ---
 (clean)
 ---
-* main 8b4091f [origin/main] 生产部署阻塞修复：task_id 熵增强到 128bit + 扩展 BACKEND 切生产地址
+* main 0792832 [origin/main] 妙手采集 POC：扩展 miaoshou_collect 任务类型（登录检测 + 采集页注入 + 成功判定）
 
 ```
 ## 2. 数据库
@@ -67,7 +67,7 @@ active_period = 2026-09
   - keyword_metric: 28014 行
   - opportunity_analysis: 2493 行
   - sqlite_sequence: 5 行
-  - user_events: 138 行
+  - user_events: 165 行
   - user_usage: 3 行
 ```
 ## 3. _state 文件
@@ -843,4 +843,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-08 21:55:06
+2026-10-09 11:53:42
