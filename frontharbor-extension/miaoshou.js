@@ -30,10 +30,13 @@ async function runMiaoshouProbe() {
 async function runMiaoshouTask(task) {
   const offerId = task.offer_id;
   const productUrl = "https://detail.1688.com/offer/" + offerId + ".html";
+  const collectUrl = MIAOSHOU_COLLECT_URL;
+  const btnTextMatch = "采集并自动认领";
+  const popupKeywords = ["已提交采集任务", "采集任务已提交", "采集任务，完成采集后"];
   const diag = { offer_id: offerId, product_url: productUrl, step: "opening" };
 
   // ===== 1. 打开采集页 =====
-  const tabId = await openAndWait(MIAOSHOU_COLLECT_URL);
+  const tabId = await openAndWait(collectUrl);
   if (!tabId) {
     diag.step = "open_failed";
     return { diag: diag, outcome: "failed", message: "打开妙手采集页失败" };
@@ -44,8 +47,19 @@ async function runMiaoshouTask(task) {
   const fillRes = await chrome.scripting.executeScript({
     target: { tabId: tabId },
     func: function(url) {
+      // 先看 URL 是否是采集页
+      if (location.href.indexOf("common_collect_box/index") < 0) {
+        return { ok: false, reason: "page_changed", current_url: location.href.slice(0, 150) };
+      }
       const ta = document.querySelector("textarea.jx-textarea__inner");
-      if (!ta) return { ok: false, reason: "need_login" };
+      if (!ta) {
+        const body = (document.body && document.body.innerText) || "";
+        const hasLogin = !!document.querySelector('input[type="password"]')
+          || body.indexOf("立即登录") >= 0
+          || body.indexOf("忘记密码") >= 0;
+        if (hasLogin) return { ok: false, reason: "need_login" };
+        return { ok: false, reason: "page_changed", current_url: location.href.slice(0, 150) };
+      }
       ta.focus();
       // 受控组件：用 prototype setter 触发框架响应
       const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
@@ -75,10 +89,10 @@ async function runMiaoshouTask(task) {
     await new Promise(function(r) { setTimeout(r, 500); });
     const clickRes = await chrome.scripting.executeScript({
       target: { tabId: tabId },
-      func: function() {
+      func: function(btnText) {
         for (const b of document.querySelectorAll("button")) {
           const t = (b.innerText || "").trim();
-          if (t.indexOf("采集并自动认领") >= 0) {
+          if (t.indexOf(btnText) >= 0) {
             if (!b.disabled && b.getAttribute("aria-disabled") !== "true") {
               b.click();
               return { clicked: true };
@@ -87,7 +101,8 @@ async function runMiaoshouTask(task) {
           }
         }
         return { clicked: false, not_found: true };
-      }
+      },
+      args: [btnTextMatch]
     });
     const r2 = clickRes && clickRes[0] && clickRes[0].result;
     if (r2 && r2.clicked) { clicked = true; break; }
@@ -107,7 +122,9 @@ async function runMiaoshouTask(task) {
       func: function() { return (document.body && document.body.innerText) || ""; }
     });
     const txt = (bodyRes && bodyRes[0] && bodyRes[0].result) || "";
-    if (txt.indexOf("已提交采集任务") >= 0 || txt.indexOf("采集任务已提交") >= 0 || txt.indexOf("采集任务，完成采集后") >= 0) {
+    var matched = false;
+    for (var kk = 0; kk < popupKeywords.length; kk++) { if (txt.indexOf(popupKeywords[kk]) >= 0) { matched = true; break; } }
+    if (matched) {
       popupSeen = true; break;
     }
     if (txt.indexOf("格式错误") >= 0 || txt.indexOf("链接无效") >= 0) {
