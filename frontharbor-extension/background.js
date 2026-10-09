@@ -7,6 +7,7 @@ const BACKEND = "http://118.89.85.175";
 const POLL_MS = 2000;
 const SEARCH_URL = "https://s.1688.com/selloffer/offer_search.htm?keywords=";
 const DETAIL_URL = "https://detail.1688.com/offer/";
+const MIAOSHOU_COLLECT_URL = "https://erp.91miaoshou.com/common_collect_box/index?fetchType=linkCopy";
 const WAIT_MS = 10000;
 const MAX_DETAIL = 40;
 const MAX_RESULTS = 3;
@@ -309,6 +310,103 @@ async function runFullTask(task) {
   return { diag: diag, results: results };
 }
 
+async function runMiaoshouTask(task) {
+  const offerId = task.offer_id;
+  const productUrl = "https://detail.1688.com/offer/" + offerId + ".html";
+  const diag = { offer_id: offerId, product_url: productUrl, step: "opening" };
+
+  const tabId = await openAndWait(MIAOSHOU_COLLECT_URL);
+  if (!tabId) {
+    diag.step = "open_failed";
+    return { diag: diag, outcome: "failed", message: "打开妙手采集页失败" };
+  }
+  await new Promise(function(r) { setTimeout(r, 4000); });
+
+  const fillRes = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: function(url) {
+      const ta = document.querySelector("textarea.jx-textarea__inner");
+      if (!ta) return { ok: false, reason: "need_login" };
+      ta.focus();
+      ta.value = url;
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+      ta.dispatchEvent(new Event("change", { bubbles: true }));
+      let btn = null;
+      for (const b of document.querySelectorAll("button")) {
+        const t = (b.innerText || "").trim();
+        if (t.indexOf("采集并自动认领") >= 0) { btn = b; break; }
+      }
+      return { ok: true, btn_found: !!btn };
+    },
+    args: [productUrl]
+  });
+  const r1 = fillRes && fillRes[0] && fillRes[0].result;
+  if (!r1 || !r1.ok) {
+    diag.step = "fill_failed";
+    try { chrome.tabs.remove(tabId); } catch (e) {}
+    if (r1 && r1.reason === "need_login") {
+      return { diag: diag, outcome: "need_login", message: "请先登录妙手 ERP" };
+    }
+    return { diag: diag, outcome: "failed", message: "填入 URL 失败" };
+  }
+
+  let clicked = false;
+  for (let i = 0; i < 15; i++) {
+    await new Promise(function(r) { setTimeout(r, 500); });
+    const clickRes = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: function() {
+        for (const b of document.querySelectorAll("button")) {
+          const t = (b.innerText || "").trim();
+          if (t.indexOf("采集并自动认领") >= 0) {
+            if (!b.disabled && b.getAttribute("aria-disabled") !== "true") {
+              b.click();
+              return { clicked: true };
+            }
+            return { clicked: false, disabled: true };
+          }
+        }
+        return { clicked: false, not_found: true };
+      }
+    });
+    const r2 = clickRes && clickRes[0] && clickRes[0].result;
+    if (r2 && r2.clicked) { clicked = true; break; }
+  }
+  if (!clicked) {
+    diag.step = "button_not_ready";
+    try { chrome.tabs.remove(tabId); } catch (e) {}
+    return { diag: diag, outcome: "failed", message: "采集按钮未启用" };
+  }
+
+  diag.step = "waiting_result";
+  let finalOutcome = null;
+  for (let i = 0; i < 20; i++) {
+    await new Promise(function(r) { setTimeout(r, 1000); });
+    const bodyRes = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: function() { return (document.body && document.body.innerText) || ""; }
+    });
+    const txt = (bodyRes && bodyRes[0] && bodyRes[0].result) || "";
+    // 黑名单：明确错误才判 failed
+    if (txt.indexOf("格式错误") >= 0 || txt.indexOf("采集失败") >= 0 || txt.indexOf("链接无效") >= 0 || txt.indexOf("请先登录") >= 0) {
+      finalOutcome = "failed"; break;
+    }
+    // 白名单：明确成功关键词
+    if (txt.indexOf("采集成功") >= 0 || txt.indexOf("提交成功") >= 0 || txt.indexOf("已采集") >= 0 || txt.indexOf("成功加入") >= 0 || txt.indexOf("采集任务") >= 0 || txt.indexOf("已提交") >= 0) {
+      finalOutcome = "success"; break;
+    }
+  }
+  try { chrome.tabs.remove(tabId); } catch (e) {}
+
+  if (finalOutcome === "failed") {
+    diag.step = "page_failed";
+    return { diag: diag, outcome: "failed", message: "妙手页面反馈采集失败" };
+  }
+  // 按钮点击成功 + 未捕获明确错误 = 视为已提交成功
+  diag.step = "clicked_no_error";
+  return { diag: diag, outcome: "success", message: "采集请求已提交到妙手采集箱" };
+}
+
 async function fetchPending() {
   if (busy) return;
   try {
@@ -332,6 +430,13 @@ async function fetchPending() {
         payload.results = r.results;
         success = r.results.length > 0;
         if (!success) errorMsg = "no results after all tiers";
+      } else if (t.task_type === "miaoshou_collect" && t.offer_id) {
+        const r = await runMiaoshouTask(t);
+        payload = r.diag;
+        payload.outcome = r.outcome;
+        payload.message = r.message;
+        success = (r.outcome === "success");
+        if (!success) errorMsg = r.outcome;
       } else if (t.task_type === "detail" && t.offer_id) {
         const dt = await openAndWait(DETAIL_URL + t.offer_id + ".html");
         if (dt) {

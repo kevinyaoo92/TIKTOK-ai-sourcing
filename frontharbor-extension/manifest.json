@@ -8,7 +8,8 @@
     "http://127.0.0.1:8123/*",
     "http://118.89.85.175/*",
     "https://s.1688.com/*",
-    "https://detail.1688.com/*"
+    "https://detail.1688.com/*",
+    "https://erp.91miaoshou.com/*"
   ],
   "background": {
     "service_worker": "background.js"
