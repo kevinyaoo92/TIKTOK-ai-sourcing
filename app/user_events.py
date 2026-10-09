@@ -32,6 +32,9 @@ ALLOWED_EVENTS = {
     "find_task_timeout",
     "find_task_cancelled",
     "find_1688_click",
+    "supplier_task_picked",
+    "supplier_result_view",
+    "supplier_result_click",
 }
 
 
@@ -52,6 +55,11 @@ def ensure_schema(db_path: Path) -> None:
             opportunity_id TEXT
         )
         """)
+        cols = [r[1] for r in con.execute("PRAGMA table_info(user_events)").fetchall()]
+        if "task_id" not in cols:
+            con.execute("ALTER TABLE user_events ADD COLUMN task_id TEXT")
+        if "result_count" not in cols:
+            con.execute("ALTER TABLE user_events ADD COLUMN result_count INTEGER")
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_user_events_anon ON user_events(anonymous_id)"
         )
@@ -64,7 +72,8 @@ def ensure_schema(db_path: Path) -> None:
 
 
 def record_event(db_path: Path, anonymous_id: str, event_name: str,
-                 category: str = None, opportunity_id: str = None) -> dict:
+                 category: str = None, opportunity_id: str = None,
+                 task_id: str = None, result_count: int = None) -> dict:
     """记录一条行为事件。失败返回 {ok: False, reason}，不影响主流程。"""
     if not anonymous_id or not event_name:
         return {"ok": False, "reason": "missing_field"}
@@ -76,9 +85,9 @@ def record_event(db_path: Path, anonymous_id: str, event_name: str,
     try:
         con.execute(
             "INSERT INTO user_events "
-            "(anonymous_id, event_name, event_time, category, opportunity_id) "
-            "VALUES (?,?,?,?,?)",
-            (anonymous_id, event_name, _now(), category, opportunity_id),
+            "(anonymous_id, event_name, event_time, category, opportunity_id, task_id, result_count) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (anonymous_id, event_name, _now(), category, opportunity_id, task_id, result_count),
         )
         con.commit()
         return {"ok": True}

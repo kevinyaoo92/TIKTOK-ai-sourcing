@@ -532,6 +532,8 @@
         };
         if (extra && extra.category) payload.category = extra.category;
         if (extra && extra.opportunity_id) payload.opportunity_id = extra.opportunity_id;
+        if (extra && extra.task_id) payload.task_id = extra.task_id;
+        if (extra && extra.result_count != null) payload.result_count = extra.result_count;
         fetch("/api/track", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -731,7 +733,7 @@
       FINDER.currentOppId = null;
       if (FIND_SRC.timer) { clearInterval(FIND_SRC.timer); FIND_SRC.timer = null; }
       if (FIND_SRC.taskId) {
-        track("find_task_cancelled", { opportunity_id: FIND_SRC.oppId });
+        track("find_task_cancelled", { opportunity_id: FIND_SRC.oppId, task_id: FIND_SRC.taskId });
         fetch("/api/poc_task/cancel", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -843,7 +845,7 @@
         '</div>';
     }
 
-    function renderFindResults(results, tier) {
+    function renderFindResults(results, tier, taskId, oppId) {
       var body = getFinderBody();
       if (!body) return;
       if (!results || results.length === 0) {
@@ -879,6 +881,9 @@
         '</div>';
       }).join("");
 
+      if (taskId) {
+        track("supplier_result_view", { opportunity_id: oppId || null, task_id: taskId, result_count: results.length });
+      }
       body.innerHTML =
         '<div class="mb-5 pb-4 border-b border-slate-100">' +
           '<h3 class="text-lg font-semibold text-slate-800">找到 ' + results.length + ' 个优质货源</h3>' +
@@ -904,7 +909,7 @@
           var elapsed = Date.now() - FIND_SRC.startedAt;
           if (t.task_status === "pending" && elapsed > 60000) {
             stopFindSourcePoll();
-            track("find_task_timeout", { opportunity_id: FIND_SRC.oppId });
+            track("find_task_timeout", { opportunity_id: FIND_SRC.oppId, task_id: FIND_SRC.taskId });
             var stuckTaskId = FIND_SRC.taskId;
             FIND_SRC.taskId = null;
             if (stuckTaskId) {
@@ -922,17 +927,23 @@
             return;
           }
           if (t.task_status === "success") {
+            var succTaskId = FIND_SRC.taskId;
+            var succOppId = FIND_SRC.oppId;
             stopFindSourcePoll();
             FIND_SRC.taskId = null;
             var payload = t.payload || {};
-            track("find_task_success", { opportunity_id: FIND_SRC.oppId });
-            renderFindResults(payload.results || [], payload.tier_used || null);
+            var succResults = payload.results || [];
+            FIND_SRC.lastTaskId = succTaskId;
+            track("find_task_success", { opportunity_id: succOppId, task_id: succTaskId, result_count: succResults.length });
+            renderFindResults(succResults, payload.tier_used || null, succTaskId, succOppId);
             return;
           }
           if (t.task_status === "failed") {
+            var failTaskId = FIND_SRC.taskId;
+            var failOppId = FIND_SRC.oppId;
             stopFindSourcePoll();
             FIND_SRC.taskId = null;
-            track("find_task_failed", { opportunity_id: FIND_SRC.oppId });
+            track("find_task_failed", { opportunity_id: failOppId, task_id: failTaskId });
             var p2 = t.payload || {};
             var rawErr = (t.error || "") + " | " + (p2.error || "");
             var reason = "找货失败，请稍后再试。";
@@ -975,13 +986,13 @@
       fetch("/api/poc_task/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_type: "find_full", keyword: kw })
+        body: JSON.stringify({ task_type: "find_full", keyword: kw, uuid: getUUID() })
       }).then(function (r) { return r.json(); })
         .then(function (d) {
           if (!d || d.status !== "ok") { renderFindError("创建任务失败"); return; }
           FIND_SRC.taskId = d.task_id;
           try { localStorage.setItem("frontharbor_find_task", JSON.stringify({taskId: d.task_id, startedAt: FIND_SRC.startedAt, oppId: FIND_SRC.oppId})); } catch (e) {}
-          track("find_task_created", { opportunity_id: FIND_SRC.oppId });
+          track("find_task_created", { opportunity_id: FIND_SRC.oppId, task_id: d.task_id });
           renderFindProgress("已下发任务，等待浏览器助手拾取...");
           FIND_SRC.timer = setInterval(pollFindSource, 2000);
           pollFindSource();
@@ -1246,7 +1257,8 @@
     document.addEventListener("click", function (ev) {
       var l1688 = ev.target.closest("[data-1688-link]");
       if (l1688) {
-        track("find_1688_click", { opportunity_id: FIND_SRC.oppId });
+        var l1688Offer = l1688.getAttribute("data-1688-link") || "";
+        track("supplier_result_click", { opportunity_id: FIND_SRC.oppId, task_id: FIND_SRC.lastTaskId || null, category: l1688Offer });
         return;
       }
       var s1688 = ev.target.closest("[data-search-1688]");

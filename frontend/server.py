@@ -320,6 +320,7 @@ def api_poc_task_create(body: dict) -> dict:
     task_type = (body.get("task_type") or "ping").strip()
     keyword = (body.get("keyword") or "").strip() or None
     offer_id = (body.get("offer_id") or "").strip() or None
+    uuid_str = (body.get("uuid") or "").strip() or None
     task_id = "task-" + uuid.uuid4().hex  # 32 hex chars = 128-bit entropy
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     with _POC_LOCK:
@@ -328,6 +329,7 @@ def api_poc_task_create(body: dict) -> dict:
             "task_type": task_type,
             "keyword": keyword,
             "offer_id": offer_id,
+            "uuid": uuid_str,
             "task_status": "pending",
             "created_at": now,
             "completed_at": None,
@@ -337,20 +339,31 @@ def api_poc_task_create(body: dict) -> dict:
 
 
 def api_poc_task_pending() -> dict:
+    picked = None
     with _POC_LOCK:
         for tid in list(_POC_TASKS.keys()):
             t = _POC_TASKS[tid]
             if t["task_status"] == "pending":
                 t["task_status"] = "running"
-                print(f"[POC_TASK] extension picked up task_id={tid} type={t.get('task_type')}", flush=True)
-                return {"status": "ok", "task": {
-                    "task_id": tid,
-                    "task_type": t.get("task_type", "ping"),
-                    "keyword": t.get("keyword"),
-                    "offer_id": t.get("offer_id"),
-                    "created_at": t["created_at"],
-                }}
-    return {"status": "ok", "task": None}
+                picked = dict(t)
+                break
+    if not picked:
+        return {"status": "ok", "task": None}
+    print(f"[POC_TASK] extension picked up task_id={picked['task_id']} type={picked.get('task_type')}", flush=True)
+    uuid_str = picked.get("uuid")
+    if uuid_str:
+        try:
+            user_events.record_event(MARKET_DB, uuid_str, "supplier_task_picked",
+                                     task_id=picked["task_id"])
+        except Exception as e:
+            print(f"[POC_TASK] record picked failed: {e}", flush=True)
+    return {"status": "ok", "task": {
+        "task_id": picked["task_id"],
+        "task_type": picked.get("task_type", "ping"),
+        "keyword": picked.get("keyword"),
+        "offer_id": picked.get("offer_id"),
+        "created_at": picked["created_at"],
+    }}
 
 
 def api_poc_task_complete(body: dict) -> dict:
@@ -528,7 +541,13 @@ class Handler(BaseHTTPRequestHandler):
                 event = (body.get("event_name") or "").strip()
                 category = (body.get("category") or "").strip() or None
                 opp_id = (body.get("opportunity_id") or "").strip() or None
-                r = user_events.record_event(MARKET_DB, anon, event, category, opp_id)
+                task_id = (body.get("task_id") or "").strip() or None
+                rc = body.get("result_count")
+                try:
+                    rc = int(rc) if rc is not None and str(rc).strip() != "" else None
+                except (TypeError, ValueError):
+                    rc = None
+                r = user_events.record_event(MARKET_DB, anon, event, category, opp_id, task_id, rc)
                 return self._json(r)
             if path == "/api/poc_build_search_url":
                 length = int(self.headers.get("Content-Length") or 0)
