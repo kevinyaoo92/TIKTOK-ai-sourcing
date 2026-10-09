@@ -344,7 +344,9 @@ async function fetchPending() {
         payload = r.diag;
         payload.outcome = r.outcome;
         payload.message = r.message;
-        success = (r.outcome === "success");
+        // POC 阶段：submitted（弹窗确认受理）视为任务流转成功，
+        // 但 payload.outcome 保留为 submitted，不伪装成已入箱。
+        success = (r.outcome === "submitted");
         if (!success) errorMsg = r.outcome;
       } else if (t.task_type === "detail" && t.offer_id) {
         const dt = await openAndWait(DETAIL_URL + t.offer_id + ".html");

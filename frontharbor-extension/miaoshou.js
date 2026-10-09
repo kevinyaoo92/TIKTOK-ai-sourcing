@@ -97,7 +97,7 @@ async function runMiaoshouTask(task) {
     try { chrome.tabs.remove(tabId); } catch (e) {}
     return { diag: diag, outcome: "failed", message: "采集按钮未启用" };
   }
-  // ===== 4. 等弹窗出现 =====
+  // ===== 4. 等弹窗出现（仅代表受理）=====
   diag.step = "waiting_confirm";
   var popupSeen = false;
   for (var w = 0; w < 15; w++) {
@@ -117,10 +117,40 @@ async function runMiaoshouTask(task) {
     }
   }
   try { chrome.tabs.remove(tabId); } catch (e) {}
-  if (popupSeen) {
-    diag.step = "popup_confirmed";
-    return { diag: diag, outcome: "success", message: "妙手已确认收到采集任务" };
+  if (!popupSeen) {
+    diag.step = "no_popup";
+    return { diag: diag, outcome: "failed", message: "未捕获妙手确认弹窗" };
   }
-  diag.step = "no_popup";
-  return { diag: diag, outcome: "failed", message: "未捕获妙手确认弹窗" };
+  diag.popup_seen = true;
+
+  // ===== 5. 一轮采集箱列表检查（仅作证据，不决定结果）=====
+  diag.step = "checking_inbox_once";
+  await new Promise(function(r) { setTimeout(r, 10000); });
+
+  var listTabId = await openAndWait(MIAOSHOU_LIST_URL);
+  if (listTabId) {
+    await new Promise(function(r) { setTimeout(r, 8000); });
+    const checkRes = await chrome.scripting.executeScript({
+      target: { tabId: listTabId },
+      func: function(oid) {
+        var bodyTxt = (document.body && document.body.innerText) || "";
+        var idx = bodyTxt.indexOf(oid);
+        if (idx >= 0) return { found: true, preview: bodyTxt.slice(Math.max(0, idx - 40), idx + 40) };
+        return { found: false, body_len: bodyTxt.length };
+      },
+      args: [offerId]
+    });
+    try { chrome.tabs.remove(listTabId); } catch (e) {}
+    diag.inbox_check_once = checkRes && checkRes[0] && checkRes[0].result;
+  } else {
+    diag.inbox_check_once = { error: "list_open_failed" };
+  }
+
+  // ===== 6. 最终状态：提交成功（未验证入箱）=====
+  diag.step = "submitted";
+  return {
+    diag: diag,
+    outcome: "submitted",
+    message: "妙手已受理采集请求（提交成功，入箱状态未验证）"
+  };
 }
