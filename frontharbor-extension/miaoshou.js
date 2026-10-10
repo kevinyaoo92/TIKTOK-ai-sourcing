@@ -27,6 +27,45 @@ async function runMiaoshouProbe() {
   return (res && res[0] && res[0].result) || { error: "no_result" };
 }
 
+async function runMiaoshouOpenLogin() {
+  const url = "https://erp.91miaoshou.com/common_collect_box/index?fetchType=linkCopy";
+  try {
+    const tab = await chrome.tabs.create({ url: url, active: true });
+    return { opened: true, tab_id: tab.id };
+  } catch (e) {
+    return { opened: false, error: String(e && e.message || e).slice(0, 200) };
+  }
+}
+
+async function runMiaoshouCheckLogin() {
+  try {
+    const tabs = await chrome.tabs.query({ url: "*://erp.91miaoshou.com/*" });
+    if (!tabs || tabs.length === 0) {
+      return { logged_in: false, reason: "no_tab" };
+    }
+    // 遍历所有妙手 tab，只要有一个采集页有 textarea 就判已登录
+    for (let i = 0; i < tabs.length; i++) {
+      try {
+        const res = await chrome.scripting.executeScript({
+          target: { tabId: tabs[i].id },
+          func: function() {
+            return { found: !!document.querySelector("textarea.jx-textarea__inner") };
+          }
+        });
+        const r = res && res[0] && res[0].result;
+        if (r && r.found) {
+          return { logged_in: true, reason: "ok", tab_id: tabs[i].id };
+        }
+      } catch (e) {
+        // 单个 tab 读不到就跳过
+      }
+    }
+    return { logged_in: false, reason: "no_textarea" };
+  } catch (e) {
+    return { logged_in: false, reason: "error", error: String(e && e.message || e).slice(0, 200) };
+  }
+}
+
 async function runMiaoshouTask(task) {
   const offerId = task.offer_id;
   const productUrl = "https://detail.1688.com/offer/" + offerId + ".html";

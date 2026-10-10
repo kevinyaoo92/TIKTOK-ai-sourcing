@@ -586,144 +586,95 @@
       });
     }
 
-    function checkMiaoshouLogin() {
-      fetch("/api/miaoshou_check_login")
+    function _pollTaskOnce(taskId, onDone, onFail) {
+      fetch("/api/poc_task/status?task_id=" + encodeURIComponent(taskId))
         .then(function(r){ return r.json(); })
         .then(function(d){
-          MS_LOGIN_STATE = (d && d.logged_in) ? "yes" : "no";
-          updateMiaoshouUI();
+          if (!d || d.status !== "ok" || !d.task) { onFail && onFail("task_not_found"); return; }
+          var st = d.task.task_status;
+          if (st === "success" || st === "failed") {
+            onDone && onDone(d.task);
+          } else if (st === "pending" || st === "running") {
+            setTimeout(function(){ _pollTaskOnce(taskId, onDone, onFail); }, 1500);
+          } else {
+            onFail && onFail(st);
+          }
         })
-        .catch(function(){
+        .catch(function(){ onFail && onFail("network_error"); });
+    }
+
+    function checkMiaoshouLogin() {
+      fetch("/api/poc_task/create", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ task_type: "miaoshou_check_login", uuid: getUUID() })
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (!d || d.status !== "ok") { MS_LOGIN_STATE = "no"; updateMiaoshouUI(); return; }
+        _pollTaskOnce(d.task_id, function(task){
+          var p = task.payload || {};
+          MS_LOGIN_STATE = p.logged_in ? "yes" : "no";
+          updateMiaoshouUI();
+        }, function(){
           MS_LOGIN_STATE = "no";
           updateMiaoshouUI();
         });
+      }).catch(function(){
+        MS_LOGIN_STATE = "no";
+        updateMiaoshouUI();
+      });
     }
 
     function startMiaoshouLogin() {
-      fetch("/api/miaoshou_open_login", {method: "POST"});
+      fetch("/api/poc_task/create", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ task_type: "miaoshou_open_login", uuid: getUUID() })
+      }).catch(function(){});
     }
 
-    // [2026-10-08] 移除 visibilitychange → checkMiaoshouLogin 监听。
-    // 原因：该监听原为找货结果页服务；且会被会员弹窗误触发，导致意外启动服务器 Playwright Chrome。
-    // 妙手正式执行层将在 Chrome Extension 中实现。checkMiaoshouLogin 函数保留备用。
+    // [2026-10-10] 恢复 visibilitychange → checkMiaoshouLogin 监听。
+    // 现在 checkMiaoshouLogin 走扩展任务（读已存在的妙手 tab），不再启动服务器 Playwright。
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState !== "visible") return;
+      var modal = getFinderEl();
+      if (!modal || modal.classList.contains("hidden")) return;
+      checkMiaoshouLogin();
+    });
 
     function getFinderEl() { return document.getElementById("finder-modal"); }
     function getFinderBody() { return document.getElementById("finder-body"); }
 
-    function renderFinderLoading(pct, phase, kw) {
+    function showFindSourceModal(oppId) {
+      var modal = getFinderEl();
       var body = getFinderBody();
-      var hasProgress = body.querySelector("#finder-pct");
-      if (!hasProgress) {
-        var kwLine = kw ? '<p class="text-xs text-brand mb-1">搜索词：' + esc(kw) + '</p>' : '';
-        body.innerHTML =
-          '<div class="text-center py-8">' +
-            '<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-light mb-4">' +
-              '<svg class="finder-spinner w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24">' +
-                '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
-                '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>' +
-              '</svg>' +
-            '</div>' +
-            '<h3 class="text-lg font-semibold text-slate-800 mb-2">正在为您寻找优质货源</h3>' +
-            kwLine +
-            '<p class="text-sm text-slate-500 mb-8">请耐心等待······</p>' +
-            '<div class="max-w-md mx-auto">' +
-              '<div class="flex items-center justify-between text-sm mb-2">' +
-                '<span class="text-slate-500" id="finder-phase">' + esc(phase || "") + '</span>' +
-                '<span class="font-semibold text-brand tabular-nums" id="finder-pct">' + pct + '%</span>' +
-              '</div>' +
-              '<div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">' +
-                '<div class="finder-progress-fill h-full rounded-full" style="width:' + pct + '%"></div>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-      } else {
-        body.querySelector("#finder-pct").textContent = pct + "%";
-        body.querySelector("#finder-phase").textContent = phase;
-        body.querySelector(".finder-progress-fill").style.width = pct + "%";
-      }
-    }
-
-    function renderFinderResults(result) {
-      var body = getFinderBody();
-      if (!result || !result.results || !result.results.length) {
-        body.innerHTML =
-          '<div class="text-center py-8">' +
-            '<div class="text-4xl mb-3">😕</div>' +
-            '<h3 class="text-lg font-semibold text-slate-800 mb-2">暂未找到符合条件的货源</h3>' +
-            '<p class="text-sm text-slate-500 mb-6">建议更换关键词或稍后再试</p>' +
-            '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
-          '</div>';
-        return;
-      }
-
-      var levelBadge = "";
-
-      var cards = result.results.map(function (x) {
-        var imgHtml = x.img
-          ? '<div class="w-28 h-28 rounded-lg overflow-hidden bg-white shrink-0 border border-slate-100"><img src="' + esc(x.img) + '" class="block w-full h-full object-cover" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"></div>'
-          : '<div class="w-28 h-28 rounded-lg bg-white shrink-0 border border-slate-100"></div>';
-
-        var titleText = x.title && x.title.length > 0 ? x.title : "(无标题)";
-        // SKU 维度文本
-        var skuText = "";
-        var dims = x.sku_dimensions || {};
-        var dimKeys = Object.keys(dims);
-        if (dimKeys.length === 1) {
-          skuText = dimKeys[0] + " " + dims[dimKeys[0]];
-        } else if (dimKeys.length > 1) {
-          skuText = dimKeys.map(function (k) { return k + " " + dims[k]; }).join(" / ");
-        }
-        return '<div class="border border-slate-200 rounded-xl p-4 mb-4 flex gap-4 hover:shadow-md transition-shadow">' +
-          imgHtml +
-          '<div class="flex-1 min-w-0">' +
-            '<div class="font-medium text-slate-800 mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' +
-              esc(titleText) +
-            '</div>' +
-            '<div class="text-xs text-slate-500 mb-2">' + esc(x.shop_name || "") + '</div>' +
-
-            '<div class="space-y-1 text-xs text-slate-600">' +
-              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>优质商家</div>' +
-              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>回头率 ' + x.rate + '%</div>' +
-              '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>24h 揽收 ' + (x.rate24 !== null && x.rate24 !== undefined ? x.rate24 + '%' : '—') + '</div>' +
-              (skuText ? '<div class="flex items-center gap-1.5"><span class="text-emerald-600">✅</span>SKU ' + esc(skuText) + '</div>' : '') +
-            '</div>' +
-          '</div>' +
-          '<div class="flex flex-col gap-2 shrink-0 self-center">' +
-            '<a href="' + esc(x.link) + '" target="_blank" rel="noopener" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand hover:text-brand whitespace-nowrap text-center no-underline">1688货源</a>' +
-            (MS_COLLECTED[x.offer_id]
-              ? '<div class="flex flex-col gap-1 items-center">' +
-                  '<button type="button" class="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap cursor-not-allowed" disabled>已采集</button>' +
-                  '<div class="text-xs text-emerald-600 text-center leading-tight" style="max-width:140px">该商品已成功采集到妙手-公用采集箱</div>' +
-                '</div>'
-              : '<button type="button" class="rounded-lg px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap bg-brand hover:bg-brand-hover cursor-pointer" data-action="use-supplier" data-offer-id="' + esc(x.offer_id) + '"' + (MS_LOGIN_STATE === "yes" ? '' : ' disabled') + '>妙手采集</button>') +
-          '</div>' +
-        '</div>';
-      }).join("");
-
-      body.innerHTML =
-        '<div class="mb-5 pb-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">' +
-          '<h3 class="text-lg font-semibold text-slate-800">找到 ' + result.results.length + ' 个优质货源</h3>' +
-          '<div class="flex items-center gap-2">' +
-            '<span id="miaoshou-login-tip" class="text-xs text-slate-400"></span>' +
-            '<button type="button" id="miaoshou-login-btn" class="rounded-lg px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap bg-brand hover:bg-brand-hover cursor-pointer">登陆妙手</button>' +
-          '</div>' +
-        '</div>' +
-        '<div>' + cards + '</div>' +
-        '<div class="text-center pt-4">' +
-          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
-        '</div>';
-      checkMiaoshouLogin();
-    }
-
-    function renderFinderError(msg) {
-      var body = getFinderBody();
+      if (!modal || !body) return;
       body.innerHTML =
         '<div class="text-center py-8">' +
-          '<div class="text-4xl mb-3">⚠️</div>' +
-          '<h3 class="text-lg font-semibold text-slate-800 mb-2">找货失败</h3>' +
-          '<p class="text-sm text-slate-500 mb-6">' + esc(msg) + '</p>' +
-          '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
+          '<div class="text-4xl mb-3">🔍</div>' +
+          '<h3 class="text-xl font-semibold text-slate-800 mb-2">找优质货源</h3>' +
+          '<p class="text-sm text-slate-600 mb-6">会员专享功能</p>' +
+          '<div class="rounded-lg bg-brand/5 border border-brand/20 px-6 py-4 mb-5 inline-block">' +
+            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">10</span> 次免费体验机会</p>' +
+          '</div>' +
+          '<p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">使用后，系统将根据当前商品机会，自动为你寻找匹配的优质 1688 货源。</p>' +
+          '<div class="flex gap-3 justify-center">' +
+            '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">稍后再说</button>' +
+            '<button class="rounded-lg bg-brand px-6 py-2 text-sm font-medium text-white hover:bg-brand-hover" data-action="confirm-find-supplier" data-opp-id="' + esc(oppId) + '">立即找货</button>' +
+          '</div>' +
         '</div>';
+      modal.classList.remove("hidden");
+    }
+
+    var FIND_SRC = { taskId: null, timer: null, startedAt: 0, oppId: null, lastTaskId: null };
+
+    function pickSearchTerm(opp) {
+      var terms = opp.searchTerms1688;
+      if (typeof terms === "string") { try { terms = JSON.parse(terms); } catch (e) { terms = []; } }
+      if (!Array.isArray(terms)) terms = [];
+      if (terms.length > 0 && String(terms[0]).trim()) return String(terms[0]).trim();
+      var kw = (opp.name || "").trim();
+      if (kw) return kw.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+      return (opp.keywordCn || opp.keyword || "").trim();
     }
 
     function closeFinderModal() {
@@ -763,57 +714,6 @@
         FIND_SRC.timer = setInterval(pollFindSource, 2000);
         pollFindSource();
       } catch (e) {}
-    }
-
-    function pollFinderTask() {
-      if (!FINDER.taskId) return;
-      fetch("/api/find_suppliers/status?task_id=" + encodeURIComponent(FINDER.taskId))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.status === "running") {
-            renderFinderLoading(data.progress || 0, data.phase || "");
-          } else if (data.status === "done") {
-            if (FINDER.timer) { clearInterval(FINDER.timer); FINDER.timer = null; }
-            renderFinderResults(data.result);
-          } else if (data.status === "error") {
-            if (FINDER.timer) { clearInterval(FINDER.timer); FINDER.timer = null; }
-            renderFinderError(data.error || "未知错误");
-          }
-        })
-        .catch(function () { /* 静默重试 */ });
-    }
-
-    function showFindSourceModal(oppId) {
-      var modal = getFinderEl();
-      var body = getFinderBody();
-      if (!modal || !body) return;
-      body.innerHTML =
-        '<div class="text-center py-8">' +
-          '<div class="text-4xl mb-3">🔍</div>' +
-          '<h3 class="text-xl font-semibold text-slate-800 mb-2">找优质货源</h3>' +
-          '<p class="text-sm text-slate-600 mb-6">会员专享功能</p>' +
-          '<div class="rounded-lg bg-brand/5 border border-brand/20 px-6 py-4 mb-5 inline-block">' +
-            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">10</span> 次免费体验机会</p>' +
-          '</div>' +
-          '<p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">使用后，系统将根据当前商品机会，自动为你寻找匹配的优质 1688 货源。</p>' +
-          '<div class="flex gap-3 justify-center">' +
-            '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">稍后再说</button>' +
-            '<button class="rounded-lg bg-brand px-6 py-2 text-sm font-medium text-white hover:bg-brand-hover" data-action="confirm-find-supplier" data-opp-id="' + esc(oppId) + '">立即找货</button>' +
-          '</div>' +
-        '</div>';
-      modal.classList.remove("hidden");
-    }
-
-    var FIND_SRC = { taskId: null, timer: null, startedAt: 0, oppId: null };
-
-    function pickSearchTerm(opp) {
-      var terms = opp.searchTerms1688;
-      if (typeof terms === "string") { try { terms = JSON.parse(terms); } catch (e) { terms = []; } }
-      if (!Array.isArray(terms)) terms = [];
-      if (terms.length > 0 && String(terms[0]).trim()) return String(terms[0]).trim();
-      var kw = (opp.name || "").trim();
-      if (kw) return kw.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
-      return (opp.keywordCn || opp.keyword || "").trim();
     }
 
     function renderFindProgress(text) {
@@ -1009,66 +909,7 @@
         .catch(function (e) { renderFindError("请求失败：" + (e.message || "")); });
     }
 
-    function openFinderModal(oppId) {
-      // 防抖：模态层已经打开就不响应
-      var modal = getFinderEl();
-      if (modal && !modal.classList.contains("hidden")) {
-        return;
-      }
-      if (FINDER.taskId) {
-        showToast("已有找货任务进行中");
-        return;
-      }
-      var opp = null;
-      for (var i = 0; i < STATE.opportunities.length; i++) {
-        if (STATE.opportunities[i].id === oppId) { opp = STATE.opportunities[i]; break; }
-      }
-      if (!opp) { showToast("未找到该机会"); return; }
-      // 用卡片显示的商品名全称作为搜索词（不截断，覆盖全部商品方向）
-      var terms = opp.searchTerms1688;
-      if (typeof terms === "string") { try { terms = JSON.parse(terms); } catch(e) { terms = []; } }
-      if (!Array.isArray(terms)) terms = [];
-      var kw = (opp.name || "").trim();
-      if (!kw) { kw = terms.length > 0 ? String(terms[0]).trim() : (opp.keywordCn || "").trim(); }
-      console.log("[FINDER] 候选搜索词 =", kw, "| terms =", terms);
-      // 去掉括号内容（如"野餐垫/折叠地垫（3-5英尺）" -> "野餐垫/折叠地垫"）
-      kw = kw.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
-      // 去掉地域词（1688 供应链不受地域限制）
-      kw = kw.replace(/泰国|泰式|东南亚|跨境|海外|Thai\b/gi, "").trim();
-      // 斜杠换成空格（"密封自封袋/拉链收纳袋" -> "密封自封袋 拉链收纳袋"）
-      kw = kw.replace(/\//g, " ").replace(/\s+/g, " ").trim();
-      if (!kw) { showToast("缺少可搜索的商品名"); return; }
-      console.log("[FINDER] 搜索词 =", kw, "| opp.name =", opp.name);
-
-      FINDER.currentOppId = oppId;
-      FINDER.taskId = null;
-
-      getFinderEl().classList.remove("hidden");
-      renderFinderLoading(0, "正在创建任务...", kw);
-
-      fetch("/api/find_suppliers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: kw, uuid: getUUID() })
-      }).then(function (r) { return r.json(); }).then(function (data) {
-        if (data && data.status === "quota_exceeded") {
-          var q = data.quota || {};
-          renderFinderError("免费找货次数已用完（" + (q.used||0) + "/" + (q.limit||0) + "）。升级付费后可继续使用。");
-          return;
-        }
-        if (!data || data.status !== "ok") {
-          renderFinderError("任务创建失败");
-          return;
-        }
-        refreshQuota();
-        FINDER.taskId = data.task_id;
-        FINDER.timer = setInterval(pollFinderTask, 800);
-      }).catch(function (e) {
-        renderFinderError("请求失败: " + (e.message || ""));
-      });
-    }
-
-    /* ---------------------------------------------------------- 详情页 */
+/* ---------------------------------------------------------- 详情页 */
     function openDetail(id) {
       var o = null;
       for (var i = 0; i < STATE.opportunities.length; i++) {
@@ -1326,40 +1167,52 @@
         if (!oid) return;
         us.disabled = true;
         us.textContent = "采集中...";
-        fetch("/api/miaoshou_collect", {
+        fetch("/api/poc_task/create", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({offer_id: oid, uuid: getUUID()})
-        }).then(function(r){ return r.json(); }).then(function(data){
-          if (data && data.status === "quota_exceeded") {
+          body: JSON.stringify({ task_type: "miaoshou_collect", offer_id: oid, uuid: getUUID() })
+        }).then(function(r){ return r.json(); }).then(function(d){
+          if (!d || d.status !== "ok") {
             us.disabled = false;
             us.textContent = "妙手采集";
-            var q = data.quota || {};
-            alert("免费采集次数已用完（" + (q.used||0) + "/" + (q.limit||0) + "）。升级付费后可继续使用。");
+            alert("创建采集任务失败");
             return;
           }
-          if (data.status === "success") {
-            refreshQuota();
-            MS_COLLECTED[oid] = true;
-            us.textContent = "已采集";
-            us.disabled = true;
-            us.classList.remove("bg-brand", "hover:bg-brand-hover");
-            us.classList.add("bg-emerald-500", "cursor-not-allowed");
-            var tip = document.createElement("div");
-            tip.className = "text-xs text-emerald-600 text-center leading-tight";
-            tip.style.maxWidth = "140px";
-            tip.textContent = "该商品已成功采集到妙手-公用采集箱";
-            if (us.parentElement) us.parentElement.appendChild(tip);
-          } else if (data.status === "need_login") {
-            MS_LOGIN_STATE = "no";
+          _pollTaskOnce(d.task_id, function(task){
+            var p = task.payload || {};
+            var outcome = p.outcome || "failed";
+            if (outcome === "submitted") {
+              refreshQuota();
+              MS_COLLECTED[oid] = true;
+              us.textContent = "已提交";
+              us.disabled = true;
+              us.classList.remove("bg-brand", "hover:bg-brand-hover");
+              us.classList.add("bg-emerald-500", "cursor-not-allowed");
+              var tip = document.createElement("div");
+              tip.className = "text-xs text-emerald-600 text-center leading-tight";
+              tip.style.maxWidth = "160px";
+              tip.textContent = "采集申请已提交，请到妙手采集箱确认入箱";
+              if (us.parentElement) us.parentElement.appendChild(tip);
+            } else if (outcome === "need_login") {
+              MS_LOGIN_STATE = "no";
+              us.disabled = false;
+              us.textContent = "妙手采集";
+              updateMiaoshouUI();
+              alert("请先登录妙手 ERP，再执行采集");
+            } else if (outcome === "page_changed") {
+              us.disabled = false;
+              us.textContent = "妙手采集";
+              alert("妙手页面版本已更新，暂时无法采集，请联系产品团队");
+            } else {
+              us.disabled = false;
+              us.textContent = "妙手采集";
+              alert("采集失败，请重试或联系产品团队");
+            }
+          }, function(){
             us.disabled = false;
             us.textContent = "妙手采集";
-            updateMiaoshouUI();
-          } else {
-            us.disabled = false;
-            us.textContent = "妙手采集";
-            alert("采集失败: " + (data.message || ""));
-          }
+            alert("采集超时，请检查浏览器助手是否正常工作");
+          });
         }).catch(function(e){
           us.disabled = false;
           us.textContent = "妙手采集";

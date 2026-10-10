@@ -333,6 +333,15 @@ async function fetchPending() {
         payload = r;
         success = !r.error;
         if (r.error) errorMsg = r.error;
+      } else if (t.task_type === "miaoshou_open_login") {
+        const r = await runMiaoshouOpenLogin();
+        payload = r;
+        success = !!r.opened;
+        if (!success) errorMsg = r.error || "open_failed";
+      } else if (t.task_type === "miaoshou_check_login") {
+        const r = await runMiaoshouCheckLogin();
+        payload = r;
+        success = true;
       } else if (t.task_type === "find_full" && t.keyword) {
         const r = await runFullTask(t);
         payload = r.diag;
