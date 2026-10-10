@@ -877,6 +877,10 @@
           '</div>' +
           '<div class="flex flex-col gap-2 shrink-0 self-center">' +
             '<a href="' + esc(x.link) + '" target="_blank" rel="noopener" data-1688-link="' + esc(x.offer_id || "") + '" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand hover:text-brand whitespace-nowrap text-center no-underline">1688货源</a>' +
+            (MS_COLLECTED[x.offer_id]
+              ? '<button type="button" class="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap cursor-not-allowed" disabled>已采集</button>'
+              : '<button type="button" class="rounded-lg px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap bg-brand hover:bg-brand-hover cursor-pointer" data-action="use-supplier" data-offer-id="' + esc(x.offer_id) + '"' + (MS_LOGIN_STATE === "yes" ? '' : ' disabled') + '>妙手采集</button>') +
+            '<button type="button" class="rounded-lg border border-brand px-3 py-1.5 text-xs text-brand hover:bg-brand hover:text-white whitespace-nowrap text-center" data-action="open-miaoshou-box">进入妙手采集箱</button>' +
           '</div>' +
         '</div>';
       }).join("");
@@ -885,13 +889,18 @@
         track("supplier_result_view", { opportunity_id: oppId || null, task_id: taskId, result_count: results.length });
       }
       body.innerHTML =
-        '<div class="mb-5 pb-4 border-b border-slate-100">' +
+        '<div class="mb-5 pb-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">' +
           '<h3 class="text-lg font-semibold text-slate-800">找到 ' + results.length + ' 个优质货源</h3>' +
+          '<div class="flex items-center gap-2">' +
+            '<span id="miaoshou-login-tip" class="text-xs text-slate-400"></span>' +
+            '<button type="button" id="miaoshou-login-btn" class="rounded-lg px-3 py-1.5 text-xs font-medium text-white whitespace-nowrap bg-brand hover:bg-brand-hover cursor-pointer">登陆妙手</button>' +
+          '</div>' +
         '</div>' +
         '<div>' + cards + '</div>' +
         '<div class="text-center pt-4">' +
           '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">关闭</button>' +
         '</div>';
+      if (typeof checkMiaoshouLogin === "function") { checkMiaoshouLogin(); }
     }
 
     function stopFindSourcePoll() {
@@ -1302,6 +1311,11 @@
       var ml = ev.target.closest("#miaoshou-login-btn");
       if (ml && !ml.disabled) {
         startMiaoshouLogin();
+        return;
+      }
+      var box = ev.target.closest("[data-action='open-miaoshou-box']");
+      if (box) {
+        window.open("https://erp.91miaoshou.com/common_collect_box/items?tabPaneName=all", "_blank");
         return;
       }
       var us = ev.target.closest("[data-action='use-supplier']");
