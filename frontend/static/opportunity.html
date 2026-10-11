@@ -668,13 +668,24 @@
     var FIND_SRC = { taskId: null, timer: null, startedAt: 0, oppId: null, lastTaskId: null };
 
     function pickSearchTerm(opp) {
+      // 优先：卡片显示的中文商品名（keywordCn = name_cn）。
+      // 括号（中文/英文）和斜杠统一替换为空格，其他字符全保留。
+      var name = (opp.keywordCn || "").trim();
+      if (name) {
+        var cleaned = name
+          .replace(/[（）()]/g, " ")
+          .replace(/\//g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (cleaned) return cleaned;
+      }
+      // 兜底 1：AI 生成的 1688 搜索词（terms[0]）
       var terms = opp.searchTerms1688;
       if (typeof terms === "string") { try { terms = JSON.parse(terms); } catch (e) { terms = []; } }
       if (!Array.isArray(terms)) terms = [];
       if (terms.length > 0 && String(terms[0]).trim()) return String(terms[0]).trim();
-      var kw = (opp.name || "").trim();
-      if (kw) return kw.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
-      return (opp.keywordCn || opp.keyword || "").trim();
+      // 兜底 2：keyword
+      return (opp.keyword || "").trim();
     }
 
     function closeFinderModal() {
