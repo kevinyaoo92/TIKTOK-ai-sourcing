@@ -46,6 +46,9 @@ def judge_single(product, keyword=None):
     main = product.get("main") or {}
     dom = product.get("dom") or {}
 
+    if main.get("sku_fetch_failed"):
+        return {"result": "reject", "tier": None, "reason": "sku_fetch_failed"}
+
     dims = main.get("dims") or {}
     min_stock = main.get("min_stock")
     if min_stock is None:
@@ -101,6 +104,59 @@ def judge_single(product, keyword=None):
 
     return {"result": "reject", "tier": None,
             "reason": "四档全部不通过", "attempts": attempts}
+
+def judge_by_tier(product, keyword, tier_name):
+    """单档判定，对齐服务器版 _match 的判序。"""
+    main = product.get("main") or {}
+    dom = product.get("dom") or {}
+
+    lv = next((l for l in LEVELS if l["name"] == tier_name), None)
+    if lv is None:
+        return {"result": "reject", "tier": None, "reason": "unknown_tier"}
+
+    card_rate = product.get("card_rate")
+    if card_rate is not None and card_rate >= 0 and card_rate <= lv["rate"]:
+        return {"result": "reject", "tier": None,
+                "reason": "rate=" + str(card_rate) + " <= " + str(lv["rate"])}
+
+    rate24 = dom.get("rate24")
+    if rate24 is not None and rate24 <= lv["rate24"]:
+        return {"result": "reject", "tier": None,
+                "reason": "rate24=" + str(rate24) + " <= " + str(lv["rate24"])}
+
+    if main.get("sku_fetch_failed"):
+        return {"result": "reject", "tier": None, "reason": "sku_fetch_failed"}
+
+    dims = main.get("dims") or {}
+    for name, n in dims.items():
+        if n > SKU_MAX:
+            return {"result": "reject", "tier": None,
+                    "reason": "SKU " + name + "=" + str(n) + " > " + str(SKU_MAX)}
+
+    min_stock = main.get("min_stock")
+    if min_stock is None:
+        min_stock = dom.get("min_stock")
+    if min_stock is None:
+        return {"result": "reject", "tier": None, "reason": "库存未抓到"}
+    if min_stock < lv["stock"]:
+        return {"result": "reject", "tier": None,
+                "reason": "库存 " + str(min_stock) + " < " + str(lv["stock"])}
+
+    moq = dom.get("moq")
+    if moq is None:
+        return {"result": "reject", "tier": None, "reason": "MOQ 未抓到"}
+    if moq > MOQ_MAX:
+        return {"result": "reject", "tier": None,
+                "reason": "MOQ=" + str(moq) + " > " + str(MOQ_MAX)}
+
+    if keyword:
+        title = dom.get("title") or ""
+        if not title_matches_keyword(title, keyword):
+            return {"result": "reject", "tier": None, "reason": "性别不一致"}
+
+    return {"result": "pass", "tier": tier_name, "reason": ""}
+
+
 # ========== 阶段 4：卡片层过滤 ==========
 import json as _json
 import requests as _requests

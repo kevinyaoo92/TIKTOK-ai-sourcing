@@ -226,12 +226,27 @@ async function backendJudge(payload, keyword) {
   return { result: "reject", tier: null, reason: "judge_failed" };
 }
 
+async function backendJudgeTier(payload, keyword, tier) {
+  try {
+    const r = await fetch(BACKEND + "/api/poc_judge_tier", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({payload: payload, keyword: keyword, tier: tier})
+    });
+    const d = await r.json();
+    if (d && d.status === "ok") return d.judge;
+  } catch (e) {}
+  return { result: "reject", tier: null, reason: "judge_tier_failed" };
+}
+
 async function runFullTask(task) {
   const keyword = task.keyword;
   const diag = { keyword: keyword, cards_raw: 0, filter_stats: {}, details_checked: 0,
                  rejects: {}, final: [], tier_used: null, audit: [] };
+
   const searchUrl = await backendSearchUrl(keyword);
   if (!searchUrl) { diag.error = "build_search_url_failed"; return { diag: diag, results: [] }; }
+
   let pageTab = await openAndWait(searchUrl);
   if (!pageTab) { diag.error = "open_search_failed"; return { diag: diag, results: [] }; }
   const rawCards = await readSearchCards(pageTab);
@@ -241,72 +256,127 @@ async function runFullTask(task) {
 
   const fr = await backendCardFilter(rawCards, keyword);
   diag.filter_stats = fr.stats;
-  const cards = fr.cards;
-  if (!cards.length) { diag.error = "no_cards_after_filter"; return { diag: diag, results: [] }; }
+  const page1Cards = fr.cards;
+  if (!page1Cards.length) { diag.error = "no_cards_after_filter"; return { diag: diag, results: [] }; }
 
   const TIER_ORDER = ["严格", "中等", "宽松", "最宽"];
-  const buckets = { "严格": [], "中等": [], "宽松": [], "最宽": [] };
+  const TIER_RATE = { "严格": 60, "中等": 50, "宽松": 40, "最宽": 30 };
+  const detailCache = {};
   const rejectReasons = {};
   let detailCount = 0;
+  let seqCounter = 0;
+  let page2Cards = null;
+  let results = [];
+  let matchedTier = null;
 
-  for (let i = 0; i < cards.length; i++) {
-    if (detailCount >= MAX_DETAIL) break;
-    const c = cards[i];
-    if (!c.offer_id) continue;
-    const dt = await openAndWait(DETAIL_URL + c.offer_id + ".html");
-    if (!dt) { rejectReasons["open_detail_failed"] = (rejectReasons["open_detail_failed"] || 0) + 1; continue; }
+  async function ensurePage2() {
+    if (page2Cards !== null) return page2Cards;
+    try {
+      const tab2 = await openAndWait(searchUrl + "&beginPage=2");
+      if (!tab2) { page2Cards = []; return page2Cards; }
+      const raw2 = await readSearchCards(tab2);
+      try { chrome.tabs.remove(tab2); } catch (e) {}
+      if (!raw2.length) { page2Cards = []; return page2Cards; }
+      const fr2 = await backendCardFilter(raw2, keyword);
+      page2Cards = fr2.cards || [];
+    } catch (e) {
+      page2Cards = [];
+    }
+    return page2Cards;
+  }
+
+  async function getDetail(offerId) {
+    if (detailCache[offerId]) return detailCache[offerId];
+    if (detailCount >= MAX_DETAIL) return null;
+    const dt = await openAndWait(DETAIL_URL + offerId + ".html");
+    if (!dt) {
+      rejectReasons["open_detail_failed"] = (rejectReasons["open_detail_failed"] || 0) + 1;
+      return null;
+    }
     const mainR = await readDetailMainWorld(dt);
     const domR = await readDetailDomFallback(dt);
     try { chrome.tabs.remove(dt); } catch (e) {}
     detailCount++;
-    const payload = { main: mainR, dom: domR, offer_id: c.offer_id, url: DETAIL_URL + c.offer_id + ".html" };
-    const jr = await backendJudge(payload, keyword);
-    diag.audit.push({
-      seq: i + 1,
-      offer_id: c.offer_id,
-      title: (domR.title || c.title || "").slice(0, 80),
-      rate: domR.rate,
-      rate24: domR.rate24,
-      min_stock: (mainR.min_stock != null ? mainR.min_stock : domR.min_stock),
-      moq: domR.moq,
-      sku_dims: mainR.dims || {},
-      judge_result: jr.result,
-      judge_tier: jr.tier,
-      judge_reason: jr.reason || "",
-      attempts: jr.attempts || []
-    });
-    if (jr.result === "pass") {
-      buckets[jr.tier].push({
-        offer_id: c.offer_id,
-        title: domR.title || c.title,
-        link: DETAIL_URL + c.offer_id + ".html",
-        img: c.img || "",
-        price: c.price,
-        shop_name: c.shop_name,
-        rate: domR.rate,
-        rate24: domR.rate24,
-        sku_dimensions: (mainR.dims || {}),
-        min_stock: mainR.min_stock != null ? mainR.min_stock : domR.min_stock,
-        moq: domR.moq,
-        tier: jr.tier
-      });
-    } else {
-      const key = jr.reason || "unknown";
-      rejectReasons[key] = (rejectReasons[key] || 0) + 1;
-    }
+    detailCache[offerId] = { main: mainR, dom: domR };
+    return detailCache[offerId];
   }
-  diag.details_checked = detailCount;
-  diag.rejects = rejectReasons;
 
-  let results = [];
-  for (let i = 0; i < TIER_ORDER.length; i++) {
-    const t = TIER_ORDER[i];
-    if (buckets[t].length > 0) {
-      results = buckets[t].slice(0, MAX_RESULTS);
-      diag.tier_used = t;
+  async function scanTier(cardsList, tierName, tierRate) {
+    const tierHits = [];
+    for (let i = 0; i < cardsList.length; i++) {
+      if (tierHits.length >= MAX_RESULTS) break;
+      const c = cardsList[i];
+      if (!c.offer_id) continue;
+      const cardRate = c.rate;
+      if (typeof cardRate === "number" && cardRate >= 0 && cardRate <= tierRate) continue;
+      const detail = await getDetail(c.offer_id);
+      if (!detail) continue;
+      const payload = {
+        main: detail.main,
+        dom: detail.dom,
+        card_rate: cardRate,
+        offer_id: c.offer_id,
+        url: DETAIL_URL + c.offer_id + ".html"
+      };
+      const jr = await backendJudgeTier(payload, keyword, tierName);
+      seqCounter++;
+      diag.audit.push({
+        seq: seqCounter,
+        offer_id: c.offer_id,
+        title: (detail.dom.title || c.title || "").slice(0, 80),
+        rate: detail.dom.rate,
+        rate24: detail.dom.rate24,
+        min_stock: (detail.main.min_stock != null ? detail.main.min_stock : detail.dom.min_stock),
+        moq: detail.dom.moq,
+        sku_dims: detail.main.dims || {},
+        judge_result: jr.result,
+        judge_tier: jr.tier,
+        judge_reason: jr.reason || "",
+        attempts: jr.attempts || []
+      });
+      if (jr.result === "pass") {
+        tierHits.push({
+          offer_id: c.offer_id,
+          title: detail.dom.title || c.title,
+          link: DETAIL_URL + c.offer_id + ".html",
+          img: c.img || "",
+          price: c.price,
+          shop_name: c.shop_name,
+          rate: detail.dom.rate,
+          rate24: detail.dom.rate24,
+          sku_dimensions: (detail.main.dims || {}),
+          min_stock: detail.main.min_stock != null ? detail.main.min_stock : detail.dom.min_stock,
+          moq: detail.dom.moq,
+          tier: jr.tier
+        });
+      } else {
+        const key = jr.reason || "unknown";
+        rejectReasons[key] = (rejectReasons[key] || 0) + 1;
+      }
+    }
+    return tierHits;
+  }
+
+  for (let t = 0; t < TIER_ORDER.length; t++) {
+    const tierName = TIER_ORDER[t];
+    const tierRate = TIER_RATE[tierName];
+    let tierHits = await scanTier(page1Cards, tierName, tierRate);
+    if (tierHits.length === 0) {
+      const p2 = await ensurePage2();
+      if (p2.length > 0) {
+        tierHits = await scanTier(p2, tierName, tierRate);
+      }
+    }
+    if (tierHits.length > 0) {
+      results = tierHits.slice(0, MAX_RESULTS);
+      matchedTier = tierName;
       break;
     }
   }
+
+  diag.details_checked = detailCount;
+  diag.rejects = rejectReasons;
+  diag.tier_used = matchedTier;
   diag.final = results.length;
   return { diag: diag, results: results };
 }

@@ -1,7 +1,7 @@
 ﻿{
   "manifest_version": 3,
   "name": "Frontharbor 找货助手",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "在您自己的 1688 账号下自动寻找优质货源，结果回传 Frontharbor。",
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "host_permissions": [

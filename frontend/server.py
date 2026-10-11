@@ -316,6 +316,17 @@ def api_poc_judge(body: dict) -> dict:
     return {"status": "ok", "judge": r}
 
 
+def api_poc_judge_tier(body: dict) -> dict:
+    """接收阶段 3A payload + 档位名，运行单档判定。"""
+    payload = body.get("payload") or {}
+    keyword = (body.get("keyword") or "").strip() or None
+    tier = (body.get("tier") or "").strip()
+    if not tier:
+        return {"status": "error", "error": "missing_tier"}
+    r = poc_judge.judge_by_tier(payload, keyword, tier)
+    return {"status": "ok", "judge": r}
+
+
 def api_poc_task_create(body: dict) -> dict:
     task_type = (body.get("task_type") or "ping").strip()
     keyword = (body.get("keyword") or "").strip() or None
@@ -573,6 +584,14 @@ class Handler(BaseHTTPRequestHandler):
                 except json.JSONDecodeError:
                     return self._json({"status": "error", "error": "bad_json"}, 400)
                 return self._json(api_poc_judge(body))
+            if path == "/api/poc_judge_tier":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_judge_tier(body))
             if path == "/api/poc_task/create":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"
