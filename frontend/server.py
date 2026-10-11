@@ -38,7 +38,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from app.category_loader import load_catalog  # noqa: E402
 from app.analysis import analyze_service  # noqa: E402
-from app.analysis import supplier_finder  # noqa: E402
 from app import user_usage  # noqa: E402
 from app import user_events  # noqa: E402
 from app.analysis import poc_judge  # noqa: E402
@@ -46,90 +45,9 @@ import threading  # noqa: E402
 import uuid  # noqa: E402
 import time  # noqa: E402
 
-# ========== 找货任务管理 ==========
-_FINDER_TASKS = {}       # task_id -> dict
-_FINDER_LOCK = threading.Lock()
-_FINDER_TTL = 1800       # 30 分钟后清理
-
 # ========== POC 任务管理（阶段 1A）==========
 _POC_TASKS = {}          # task_id -> dict
 _POC_LOCK = threading.Lock()
-
-
-def _run_finder_task(task_id, keyword):
-    def on_progress(pct, phase, extra):
-        with _FINDER_LOCK:
-            if task_id in _FINDER_TASKS:
-                _FINDER_TASKS[task_id]["progress"] = pct
-                _FINDER_TASKS[task_id]["phase"] = phase
-                _FINDER_TASKS[task_id].update(extra or {})
-    try:
-        result = supplier_finder.find_suppliers(keyword, on_progress=on_progress)
-        with _FINDER_LOCK:
-            if task_id in _FINDER_TASKS:
-                _FINDER_TASKS[task_id].update({
-                    "status": "done",
-                    "progress": 100,
-                    "phase": "匹配完成",
-                    "result": result,
-                    "finished_at": time.time(),
-                })
-    except Exception as e:
-        with _FINDER_LOCK:
-            if task_id in _FINDER_TASKS:
-                _FINDER_TASKS[task_id].update({
-                    "status": "error",
-                    "progress": 100,
-                    "phase": "出错",
-                    "error": str(e)[:200],
-                    "finished_at": time.time(),
-                })
-
-
-def api_find_suppliers(body: dict) -> dict:
-    keyword = (body.get("keyword") or "").strip()
-    if not keyword:
-        return {"status": "error", "error": "missing_keyword", "message": "缺少 keyword"}
-    task_id = str(uuid.uuid4())
-    with _FINDER_LOCK:
-        _FINDER_TASKS[task_id] = {
-            "status": "running",
-            "progress": 0,
-            "phase": "任务已创建",
-            "keyword": keyword,
-            "created_at": time.time(),
-        }
-    t = threading.Thread(target=_run_finder_task, args=(task_id, keyword), daemon=True)
-    t.start()
-    return {"status": "ok", "task_id": task_id}
-
-
-def api_find_suppliers_status(task_id: str) -> dict:
-    with _FINDER_LOCK:
-        task = _FINDER_TASKS.get(task_id)
-    if not task:
-        return {"status": "error", "error": "not_found", "message": "任务不存在或已过期"}
-    resp = {
-        "status": task["status"],
-        "progress": task["progress"],
-        "phase": task["phase"],
-        "keyword": task.get("keyword", ""),
-    }
-    if task["status"] == "done":
-        resp["result"] = task.get("result", {})
-    elif task["status"] == "error":
-        resp["error"] = task.get("error", "")
-    return resp
-
-
-def _cleanup_finder_tasks():
-    now = time.time()
-    with _FINDER_LOCK:
-        expired = [tid for tid, t in _FINDER_TASKS.items()
-                   if now - t.get("created_at", now) > _FINDER_TTL]
-        for tid in expired:
-            del _FINDER_TASKS[tid]
-
 
 
 # direction_id -> 官方二级类目（时尚配件，基于 category_mapping_audit 确认映射）
@@ -507,9 +425,6 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/api/opportunity/"):
                 obj, code = api_opportunity(path.rsplit("/", 1)[1])
                 return self._json(obj, code)
-            if path == "/api/find_suppliers/status":
-                task_id = qs.get("task_id", [""])[0]
-                return self._json(api_find_suppliers_status(task_id))
             if path == "/api/usage":
                 uuid_str = (qs.get("uuid") or [""])[0].strip()
                 if not uuid_str:
@@ -526,9 +441,6 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/poc_task/status":
                 task_id = qs.get("task_id", [""])[0]
                 return self._json(api_poc_task_status(task_id))
-            if path == "/api/miaoshou_check_login":
-                from app.analysis import miaoshou_collector
-                return self._json(miaoshou_collector.check_login())
             return self._send(404, b"not found", "text/plain; charset=utf-8")
         except Exception as exc:  # noqa: BLE001
             try:
@@ -625,49 +537,6 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"status": "error", "error": "bad_json",
                                        "message": "请求体不是合法 JSON"}, 400)
                 return self._json(api_analyze(body))
-            if path == "/api/find_suppliers":
-                length = int(self.headers.get("Content-Length") or 0)
-                raw = self.rfile.read(length) if length else b"{}"
-                try:
-                    body = json.loads(raw.decode("utf-8") or "{}")
-                except json.JSONDecodeError:
-                    return self._json({"status": "error", "error": "bad_json"}, 400)
-                uuid_str = (body.get("uuid") or "").strip()
-                if not uuid_str:
-                    return self._json({"status": "error", "error": "missing_uuid"}, 400)
-                q = user_usage.check_and_decrement(MARKET_DB, uuid_str, "find")
-                if not q.get("ok"):
-                    return self._json({"status": "quota_exceeded", "quota": q}, 403)
-                _cleanup_finder_tasks()
-                resp = api_find_suppliers(body)
-                resp["quota"] = q
-                return self._json(resp)
-            if path == "/api/miaoshou_collect":
-                length = int(self.headers.get("Content-Length") or 0)
-                raw = self.rfile.read(length) if length else b"{}"
-                try:
-                    body = json.loads(raw.decode("utf-8") or "{}")
-                except json.JSONDecodeError:
-                    return self._json({"status": "error", "error": "bad_json"}, 400)
-                offer_id = (body.get("offer_id") or "").strip()
-                if not offer_id:
-                    return self._json({"status": "failed", "message": "missing offer_id"}, 400)
-                uuid_str = (body.get("uuid") or "").strip()
-                if not uuid_str:
-                    return self._json({"status": "error", "error": "missing_uuid"}, 400)
-                q = user_usage.check_and_decrement(MARKET_DB, uuid_str, "collect")
-                if not q.get("ok"):
-                    return self._json({"status": "quota_exceeded", "quota": q}, 403)
-                from app.analysis import miaoshou_collector
-                resp = miaoshou_collector.collect_to_miaoshou(offer_id)
-                resp["quota"] = q
-                return self._json(resp)
-            if path == "/api/miaoshou_check_login":
-                from app.analysis import miaoshou_collector
-                return self._json(miaoshou_collector.check_login())
-            if path == "/api/miaoshou_open_login":
-                from app.analysis import miaoshou_collector
-                return self._json(miaoshou_collector.open_login_page())
             return self._send(404, b"not found", "text/plain; charset=utf-8")
         except Exception as exc:  # noqa: BLE001
             try:
