@@ -1,6 +1,5 @@
 // 妙手采集模块（独立执行层）
 const MIAOSHOU_COLLECT_URL = "https://erp.91miaoshou.com/common_collect_box/index?fetchType=linkCopy";
-const MIAOSHOU_LIST_URL = "https://erp.91miaoshou.com/common_collect_box/items?tabPaneName=all";
 
 async function runMiaoshouProbe() {
   const tabId = await openAndWait(MIAOSHOU_COLLECT_URL);
@@ -75,7 +74,7 @@ async function runMiaoshouTask(task) {
   const diag = { offer_id: offerId, product_url: productUrl, step: "opening" };
 
   // ===== 1. 打开采集页 =====
-  const tabId = await openAndWait(collectUrl);
+  const tabId = await openAndWait(collectUrl, false);
   if (!tabId) {
     diag.step = "open_failed";
     return { diag: diag, outcome: "failed", message: "打开妙手采集页失败" };
@@ -172,35 +171,13 @@ async function runMiaoshouTask(task) {
       return { diag: diag, outcome: "failed", message: "妙手反馈链接错误" };
     }
   }
-  try { chrome.tabs.remove(tabId); } catch (e) {}
   if (!popupSeen) {
+    try { chrome.tabs.remove(tabId); } catch (e) {}
     diag.step = "no_popup";
     return { diag: diag, outcome: "failed", message: "未捕获妙手确认弹窗" };
   }
   diag.popup_seen = true;
-
-  // ===== 5. 一轮采集箱列表检查（仅作证据，不决定结果）=====
-  diag.step = "checking_inbox_once";
-  await new Promise(function(r) { setTimeout(r, 10000); });
-
-  var listTabId = await openAndWait(MIAOSHOU_LIST_URL);
-  if (listTabId) {
-    await new Promise(function(r) { setTimeout(r, 8000); });
-    const checkRes = await chrome.scripting.executeScript({
-      target: { tabId: listTabId },
-      func: function(oid) {
-        var bodyTxt = (document.body && document.body.innerText) || "";
-        var idx = bodyTxt.indexOf(oid);
-        if (idx >= 0) return { found: true, preview: bodyTxt.slice(Math.max(0, idx - 40), idx + 40) };
-        return { found: false, body_len: bodyTxt.length };
-      },
-      args: [offerId]
-    });
-    try { chrome.tabs.remove(listTabId); } catch (e) {}
-    diag.inbox_check_once = checkRes && checkRes[0] && checkRes[0].result;
-  } else {
-    diag.inbox_check_once = { error: "list_open_failed" };
-  }
+  try { chrome.tabs.remove(tabId); } catch (e) {}
 
   // ===== 6. 最终状态：提交成功（未验证入箱）=====
   diag.step = "submitted";

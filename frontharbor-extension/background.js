@@ -27,9 +27,10 @@ async function saveState(extra) {
   } catch (e) {}
 }
 
-function openAndWait(url) {
+function openAndWait(url, active) {
   return new Promise((resolve) => {
-    chrome.tabs.create({ url: url, active: true }, (tab) => {
+    if (active === undefined) active = true;
+    chrome.tabs.create({ url: url, active: active }, (tab) => {
       if (!tab || !tab.id) { resolve(null); return; }
       const tabId = tab.id;
       const onUpdated = (tid, info) => {
