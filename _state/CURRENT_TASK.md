@@ -1,13 +1,14 @@
 # 当前任务（进度存根）
 
-最后更新: 2026-10-06 11:45
+最后更新: 2026-10-12 10:45
 
 ## 当前状态
 
-- 第 4 个纠偏任务已完成（找货入口改为正式产品形态）
-- 当前"找优质货源"已按正式产品形态展示
-- 真实找货暂未执行（点"立即找货"仅提示"正在准备中"）
-- Playwright 继续冻结（内部验证资产，不继续投资）
+- 扩展找货已对齐 Playwright 规则（翻页 + 分档重扫 + 回头率初筛 + 详情缓存）
+- 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成，不再自动进采集箱核查）
+- Playwright 死代码已清理（server.py 12 处 + 删 supplier_finder.py / miaoshou_collector.py）
+- 产品运行链路：扩展 + 线上 API + AI 分析，零 Playwright 依赖
+- Playwright 定位：月度数据生产工具（本地跑，不上云）
 - Phase 2 进入真实用户行为验证阶段
 
 ## 已完成能力速览
@@ -20,7 +21,9 @@
   - category_selected / opportunity_view / opportunity_detail
   - search_1688_click / find_supplier_click / apply_experience（历史）
   - confirm_find_supplier
-- 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货（toast 准备中）
+- 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货
+- 扩展找货（v0.5.0）：翻页 + 分档重扫（严格→中等→宽松→最宽）+ 回头率初筛 + 详情缓存
+- 妙手采集（v0.5.1）：后台标签页 + 弹窗即完成，用户视角零跳转
 
 ## 下一步
 

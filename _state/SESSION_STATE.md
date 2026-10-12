@@ -35,27 +35,29 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-10 13:41
+# SESSION STATE — 2026-10-12 10:39
 ## 1. Git
 
 ```
+e691d89 妙手采集：后台标签页 + 删除采集箱核查步骤
+699c6c9 清理 Playwright 死代码：产品链路彻底摆脱服务器侧浏览器
+162604c 扩展找货对齐 Playwright 规则：翻页 + 分档重扫 + 回头率初筛 + 详情缓存
+6c8026e 修复 pickSearchTerm：优先用卡片中文商品名，括号和斜杠替换为空格，内容全保留
+839432a 部署清单：新增 DEPLOY_CHECKLIST.md + 扩展 BACKEND 切生产
+8927222 妙手切扩展：登录检测/打开登录页/采集全部走扩展任务，清除旧链路调用和死代码
+984727f 收尾：刷新 SESSION_STATE 快照
 50c6bf5 恢复妙手按钮：卡片加妙手采集+进入妙手采集箱，弹窗顶部加登陆妙手
 f3b879a 妙手 POC：区分 need_login 与 page_changed + 4 项异常场景测试通过
 fea300e 妙手 POC 收尾：成功状态改为 submitted（提交成功，入箱未验证）
-e0185ab 妙手采集 POC：独立 miaoshou.js 模块 + 弹窗确认判定
-d5cf985 收尾：v0.1.3-realuser 妙手采集 POC 部署完成
-0792832 妙手采集 POC：扩展 miaoshou_collect 任务类型（登录检测 + 采集页注入 + 成功判定）
-e3641bd 埋点补全：supplier_task_picked / supplier_result_view / supplier_result_click + task_id 链路串联
-0fed0bf 收尾：v0.1.1-realuser 生产部署完成
-8b4091f 生产部署阻塞修复：task_id 熵增强到 128bit + 扩展 BACKEND 切生产地址
-2f4c64a 修复：找货失败提示改中文，兜底 '找货失败，请稍后再试'
 
 ---
+?? _state/_tiny.txt
+?? _state/deploy_picksearch.bundle
 ?? _state/regression.py
 ?? _state/regression2.py
 
 ---
-* main 50c6bf5 [origin/main] 恢复妙手按钮：卡片加妙手采集+进入妙手采集箱，弹窗顶部加登陆妙手
+* main e691d89 [origin/main] 妙手采集：后台标签页 + 删除采集箱核查步骤
 
 ```
 ## 2. 数据库
@@ -69,7 +71,7 @@ active_period = 2026-09
   - keyword_metric: 28014 行
   - opportunity_analysis: 2493 行
   - sqlite_sequence: 5 行
-  - user_events: 209 行
+  - user_events: 354 行
   - user_usage: 3 行
 ```
 ## 3. _state 文件
@@ -845,4 +847,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-10 13:41:38
+2026-10-12 10:39:14

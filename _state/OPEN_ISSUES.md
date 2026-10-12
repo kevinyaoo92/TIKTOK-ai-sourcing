@@ -1,5 +1,5 @@
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 2026-10-05 20:30
+最后更新: 2026-10-12 10:45
 项目根: D:\tiktok-ai-sourcing
 
 ## P0 — 当前阻塞
@@ -9,7 +9,7 @@
 
 ## P1 — 待办
 1. 撤除 Basic Auth（域名 + HTTPS 上线后）。
-2. 妙手集成方式确认：当前用 Playwright 走链接采集，Phase 3 才拆到 Chrome 扩展。
+2. 妙手集成已切扩展（v0.5.1），Playwright 妙手链路已删。
 3. 项目卫生：C 盘空壳 tiktok-audit、云盘副本、opportunity.html.bak_* 备份清理。
 
 ## P2 — 长期
@@ -26,6 +26,9 @@
 - "不要点去找货按钮"：已放行，Phase 1 端到端验收通过。
 - 用户系统 + 免费额度：已完成，find 10 / collect 5，UUID 计数。
 - 部署上云：已完成（CVM 118.89.85.175，systemd，Nginx 反代）。
+- 扩展找货对齐 Playwright 规则（2026-10-11，commit 162604c，tag v0.5.0-extension-rules-aligned）。
+- 清理 Playwright 死代码（2026-10-11，commit 699c6c9，删 server.py 12 处 + 2 文件）。
+- 妙手焦点优化（2026-10-12，commit e691d89，tag v0.5.1-miaoshou-focus-fix）。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。
