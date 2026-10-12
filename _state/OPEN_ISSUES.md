@@ -1,15 +1,14 @@
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 2026-10-12 10:45
+最后更新: 2026-10-12 13:20
 项目根: D:\tiktok-ai-sourcing
 
 ## P0 — 当前阻塞
-1. ICP 备案审核中：腾讯云初审 + 陕西管局审核（7-10 工作日），等 010 电话 + 幕布拍照。
-2. 域名解析 + HTTPS：等备案通过后做。
-3. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
+1. 公安联网备案审核中：汉台区网安大队（1-3 工作日），等短信通知（13186335720）。
+2. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
 
 ## P1 — 待办
-1. 撤除 Basic Auth（域名 + HTTPS 上线后）。
-2. 妙手集成已切扩展（v0.5.1），Playwright 妙手链路已删。
+1. 扩展切 HTTPS：BACKEND 从 http://118.89.85.175 改 https://frontharbor.cn（等 HTTPS 稳定几天）
+2. 撤除 Basic Auth（扩展切 HTTPS 后）
 3. 项目卫生：C 盘空壳 tiktok-audit、云盘副本、opportunity.html.bak_* 备份清理。
 
 ## P2 — 长期
@@ -29,6 +28,9 @@
 - 扩展找货对齐 Playwright 规则（2026-10-11，commit 162604c，tag v0.5.0-extension-rules-aligned）。
 - 清理 Playwright 死代码（2026-10-11，commit 699c6c9，删 server.py 12 处 + 2 文件）。
 - 妙手焦点优化（2026-10-12，commit e691d89，tag v0.5.1-miaoshou-focus-fix）。
+- HTTPS 上线（2026-10-12，commit f850335，tag v0.5.2-https-beian-footer）。
+- 备案号页脚（2026-10-12，commit f850335，陕ICP备2026028540号，首页 + 内页）。
+- 公安联网备案提交（2026-10-12，汉台区网安大队审核中，1-3 工作日）。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。

@@ -1,13 +1,15 @@
 # 当前任务（进度存根）
 
-最后更新: 2026-10-12 10:45
+最后更新: 2026-10-12 13:20
 
 ## 当前状态
 
+- HTTPS 已上线：https://frontharbor.cn 可访问（证书有效期至 2027-01-10，Basic Auth 保留）
+- 页脚已加 ICP 备案号（陕ICP备2026028540号）：首页 + 内页
+- 公安联网备案已提交（汉台区网安大队审核中，1-3 工作日）
 - 扩展找货已对齐 Playwright 规则（翻页 + 分档重扫 + 回头率初筛 + 详情缓存）
-- 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成，不再自动进采集箱核查）
-- Playwright 死代码已清理（server.py 12 处 + 删 supplier_finder.py / miaoshou_collector.py）
-- 产品运行链路：扩展 + 线上 API + AI 分析，零 Playwright 依赖
+- 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成）
+- Playwright 死代码已清理，产品运行链路零 Playwright 依赖
 - Playwright 定位：月度数据生产工具（本地跑，不上云）
 - Phase 2 进入真实用户行为验证阶段
 
@@ -24,11 +26,15 @@
 - 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货
 - 扩展找货（v0.5.0）：翻页 + 分档重扫（严格→中等→宽松→最宽）+ 回头率初筛 + 详情缓存
 - 妙手采集（v0.5.1）：后台标签页 + 弹窗即完成，用户视角零跳转
+- HTTPS 上线（v0.5.2）：https://frontharbor.cn（证书至 2027-01-10）
+- 备案号页脚（v0.5.2）：陕ICP备2026028540号，首页 + 内页
 
 ## 下一步
 
+- 等公安联网备案审核通过（1-3 工作日）
+- HTTPS 稳定几天后：扩展切 HTTPS（manifest.json + background.js BACKEND）
+- 扩展切 HTTPS 后：撤 Basic Auth
 - 等真实用户数据验证 Phase 2 商业价值
-- ICP 备案通过后：域名解析 + HTTPS + 撤 Basic Auth
 - 观察漏斗，决定是否进入 Phase 3（最小 Extension POC）
 
 ## 服务器状态

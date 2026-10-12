@@ -35,10 +35,12 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-12 10:39
+# SESSION STATE — 2026-10-12 13:05
 ## 1. Git
 
 ```
+f850335 备案号页脚 + Nginx HTTPS 配置备份
+b2ee851 状态收尾：扩展找货对齐 + Playwright 清理 + 妙手焦点优化
 e691d89 妙手采集：后台标签页 + 删除采集箱核查步骤
 699c6c9 清理 Playwright 死代码：产品链路彻底摆脱服务器侧浏览器
 162604c 扩展找货对齐 Playwright 规则：翻页 + 分档重扫 + 回头率初筛 + 详情缓存
@@ -47,8 +49,6 @@ e691d89 妙手采集：后台标签页 + 删除采集箱核查步骤
 8927222 妙手切扩展：登录检测/打开登录页/采集全部走扩展任务，清除旧链路调用和死代码
 984727f 收尾：刷新 SESSION_STATE 快照
 50c6bf5 恢复妙手按钮：卡片加妙手采集+进入妙手采集箱，弹窗顶部加登陆妙手
-f3b879a 妙手 POC：区分 need_login 与 page_changed + 4 项异常场景测试通过
-fea300e 妙手 POC 收尾：成功状态改为 submitted（提交成功，入箱未验证）
 
 ---
 ?? _state/_tiny.txt
@@ -57,7 +57,7 @@ fea300e 妙手 POC 收尾：成功状态改为 submitted（提交成功，入箱
 ?? _state/regression2.py
 
 ---
-* main e691d89 [origin/main] 妙手采集：后台标签页 + 删除采集箱核查步骤
+* main f850335 [origin/main] 备案号页脚 + Nginx HTTPS 配置备份
 
 ```
 ## 2. 数据库
@@ -79,14 +79,15 @@ active_period = 2026-09
 
 # 当前任务（进度存根）
 
-最后更新: 2026-10-06 11:45
+最后更新: 2026-10-12 10:45
 
 ## 当前状态
 
-- 第 4 个纠偏任务已完成（找货入口改为正式产品形态）
-- 当前"找优质货源"已按正式产品形态展示
-- 真实找货暂未执行（点"立即找货"仅提示"正在准备中"）
-- Playwright 继续冻结（内部验证资产，不继续投资）
+- 扩展找货已对齐 Playwright 规则（翻页 + 分档重扫 + 回头率初筛 + 详情缓存）
+- 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成，不再自动进采集箱核查）
+- Playwright 死代码已清理（server.py 12 处 + 删 supplier_finder.py / miaoshou_collector.py）
+- 产品运行链路：扩展 + 线上 API + AI 分析，零 Playwright 依赖
+- Playwright 定位：月度数据生产工具（本地跑，不上云）
 - Phase 2 进入真实用户行为验证阶段
 
 ## 已完成能力速览
@@ -99,7 +100,9 @@ active_period = 2026-09
   - category_selected / opportunity_view / opportunity_detail
   - search_1688_click / find_supplier_click / apply_experience（历史）
   - confirm_find_supplier
-- 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货（toast 准备中）
+- 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货
+- 扩展找货（v0.5.0）：翻页 + 分档重扫（严格→中等→宽松→最宽）+ 回头率初筛 + 详情缓存
+- 妙手采集（v0.5.1）：后台标签页 + 弹窗即完成，用户视角零跳转
 
 ## 下一步
 
@@ -361,7 +364,7 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 ### OPEN_ISSUES.md
 
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 2026-10-05 20:30
+最后更新: 2026-10-12 10:45
 项目根: D:\tiktok-ai-sourcing
 
 ## P0 — 当前阻塞
@@ -371,7 +374,7 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 
 ## P1 — 待办
 1. 撤除 Basic Auth（域名 + HTTPS 上线后）。
-2. 妙手集成方式确认：当前用 Playwright 走链接采集，Phase 3 才拆到 Chrome 扩展。
+2. 妙手集成已切扩展（v0.5.1），Playwright 妙手链路已删。
 3. 项目卫生：C 盘空壳 tiktok-audit、云盘副本、opportunity.html.bak_* 备份清理。
 
 ## P2 — 长期
@@ -388,6 +391,9 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 - "不要点去找货按钮"：已放行，Phase 1 端到端验收通过。
 - 用户系统 + 免费额度：已完成，find 10 / collect 5，UUID 计数。
 - 部署上云：已完成（CVM 118.89.85.175，systemd，Nginx 反代）。
+- 扩展找货对齐 Playwright 规则（2026-10-11，commit 162604c，tag v0.5.0-extension-rules-aligned）。
+- 清理 Playwright 死代码（2026-10-11，commit 699c6c9，删 server.py 12 处 + 2 文件）。
+- 妙手焦点优化（2026-10-12，commit e691d89，tag v0.5.1-miaoshou-focus-fix）。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。
@@ -847,4 +853,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-12 10:39:14
+2026-10-12 13:05:45
