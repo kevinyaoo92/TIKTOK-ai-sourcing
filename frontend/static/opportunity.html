@@ -727,6 +727,16 @@
       } catch (e) {}
     }
 
+    var PROGRESS_TEXT = {
+      starting: "正在启动找货任务……",
+      opening_search: "正在打开 1688 搜索页面……",
+      collecting_candidates: "正在查找合适的货源……",
+      filtering_candidates: "正在筛选优质货源……",
+      preparing_results: "货源已找到，正在整理结果……",
+      completed: "找货完成。",
+      failed: "本次找货未能完成，请查看具体错误信息。"
+    };
+
     function renderFindProgress(text) {
       var body = getFinderBody();
       if (!body) return;
@@ -843,7 +853,9 @@
             return;
           }
           if (t.task_status === "running") {
-            renderFindProgress("扩展正在 1688 上执行找货，请稍候...");
+            var stage = t.progress && t.progress.stage;
+            var text = (stage && PROGRESS_TEXT[stage]) || "扩展正在 1688 上执行找货，请稍候...";
+            renderFindProgress(text);
             return;
           }
           if (t.task_status === "success") {

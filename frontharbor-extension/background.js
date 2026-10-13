@@ -240,23 +240,39 @@ async function backendJudgeTier(payload, keyword, tier) {
   return { result: "reject", tier: null, reason: "judge_tier_failed" };
 }
 
+function reportProgress(taskId, stage, seq) {
+  try {
+    fetch(BACKEND + "/api/poc_task/progress", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({task_id: taskId, stage: stage, progress_seq: seq})
+    }).catch(function () {});
+  } catch (e) {}
+}
+
 async function runFullTask(task) {
   const keyword = task.keyword;
   const diag = { keyword: keyword, cards_raw: 0, filter_stats: {}, details_checked: 0,
                  rejects: {}, final: [], tier_used: null, audit: [] };
 
+  let progressSeq = 0;
+  reportProgress(task.task_id, "starting", ++progressSeq);
+
   const searchUrl = await backendSearchUrl(keyword);
   if (!searchUrl) { diag.error = "build_search_url_failed"; return { diag: diag, results: [] }; }
 
+  reportProgress(task.task_id, "opening_search", ++progressSeq);
   let pageTab = await openAndWait(searchUrl);
   if (!pageTab) { diag.error = "open_search_failed"; return { diag: diag, results: [] }; }
   const rawCards = await readSearchCards(pageTab);
   diag.cards_raw = rawCards.length;
+  reportProgress(task.task_id, "collecting_candidates", ++progressSeq);
   try { chrome.tabs.remove(pageTab); } catch (e) {}
   if (!rawCards.length) { diag.error = "no_cards"; return { diag: diag, results: [] }; }
 
   const fr = await backendCardFilter(rawCards, keyword);
   diag.filter_stats = fr.stats;
+  reportProgress(task.task_id, "filtering_candidates", ++progressSeq);
   const page1Cards = fr.cards;
   if (!page1Cards.length) { diag.error = "no_cards_after_filter"; return { diag: diag, results: [] }; }
 
@@ -375,6 +391,7 @@ async function runFullTask(task) {
     }
   }
 
+  reportProgress(task.task_id, "preparing_results", ++progressSeq);
   diag.details_checked = detailCount;
   diag.rejects = rejectReasons;
   diag.tier_used = matchedTier;

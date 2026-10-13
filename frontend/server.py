@@ -271,6 +271,8 @@ def api_poc_task_create(body: dict) -> dict:
             "task_status": "pending",
             "created_at": now,
             "completed_at": None,
+            "progress": None,
+            "progress_seq": 0,
         }
     print(f"[POC_TASK] created task_id={task_id} type={task_type} kw={keyword!r} oid={offer_id!r}", flush=True)
     return {"status": "ok", "task_id": task_id, "task_status": "pending", "quota": quota_result}
@@ -352,6 +354,29 @@ def api_poc_task_status(task_id: str) -> dict:
         if not t:
             return {"status": "error", "error": "task_not_found"}
         return {"status": "ok", "task": dict(t)}
+
+
+def api_poc_task_progress(body: dict) -> dict:
+    task_id = (body.get("task_id") or "").strip()
+    stage = (body.get("stage") or "").strip()
+    if not task_id or not stage:
+        return {"status": "error", "error": "missing_task_id_or_stage"}
+    try:
+        seq = int(body.get("progress_seq") or 0)
+    except (TypeError, ValueError):
+        seq = 0
+    with _POC_LOCK:
+        t = _POC_TASKS.get(task_id)
+        if not t:
+            return {"status": "error", "error": "task_not_found"}
+        if t["task_status"] not in ("pending", "running"):
+            return {"status": "ok", "task_id": task_id, "ignored": "task_final"}
+        cur_seq = int(t.get("progress_seq") or 0)
+        if seq <= cur_seq:
+            return {"status": "ok", "task_id": task_id, "ignored": "stale_seq"}
+        t["progress"] = {"stage": stage, "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")}
+        t["progress_seq"] = seq
+    return {"status": "ok", "task_id": task_id, "stage": stage, "progress_seq": seq}
 
 
 def api_analyze(body: dict) -> dict:
@@ -537,6 +562,14 @@ class Handler(BaseHTTPRequestHandler):
                 except json.JSONDecodeError:
                     return self._json({"status": "error", "error": "bad_json"}, 400)
                 return self._json(api_poc_task_complete(body))
+            if path == "/api/poc_task/progress":
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    body = json.loads(raw.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    return self._json({"status": "error", "error": "bad_json"}, 400)
+                return self._json(api_poc_task_progress(body))
             if path == "/api/analyze":
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b"{}"
