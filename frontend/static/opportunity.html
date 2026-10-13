@@ -542,11 +542,21 @@
       } catch (e) {}
     }
 
+    var QUOTA_CACHE = null;
+
+    function getFindRemaining() {
+      if (QUOTA_CACHE && QUOTA_CACHE.find && typeof QUOTA_CACHE.find.remaining === "number") {
+        return QUOTA_CACHE.find.remaining;
+      }
+      return 20;
+    }
+
     function refreshQuota() {
-      fetch("/api/usage?uuid=" + encodeURIComponent(getUUID()))
+      fetch("/api/usage?uuid=" + encodeURIComponent(getUUID()), { cache: "no-store" })
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (!d || !d.ok) return;
+          QUOTA_CACHE = d;
           var el = document.getElementById("quota-bar");
           if (el) {
             el.textContent = "找货剩余 " + d.find.remaining + "/" + d.find.limit +
@@ -654,9 +664,9 @@
           '<h3 class="text-xl font-semibold text-slate-800 mb-2">找优质货源</h3>' +
           '<p class="text-sm text-slate-600 mb-6">会员专享功能</p>' +
           '<div class="rounded-lg bg-brand/5 border border-brand/20 px-6 py-4 mb-5 inline-block">' +
-            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">20</span> 次免费体验机会</p>' +
+            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">' + getFindRemaining() + '</span> 次免费体验机会</p>' +
           '</div>' +
-          '<p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">使用后，系统将根据当前商品机会，自动为你寻找匹配的优质 1688 货源。</p>' +
+          '<p class="text-sm text-slate-500 mb-6">使用后，系统将根据当前商品机会，自动为你寻找匹配的优质 1688 货源。</p>' +
           '<div class="flex gap-3 justify-center">' +
             '<button class="rounded-lg border border-slate-300 px-6 py-2 text-sm text-slate-600 hover:border-brand hover:text-brand" data-action="close-finder">稍后再说</button>' +
             '<button class="rounded-lg bg-brand px-6 py-2 text-sm font-medium text-white hover:bg-brand-hover" data-action="confirm-find-supplier" data-opp-id="' + esc(oppId) + '">立即找货</button>' +
