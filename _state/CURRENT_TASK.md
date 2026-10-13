@@ -1,16 +1,18 @@
 # 当前任务（进度存根）
 
-最后更新: 2026-10-12 13:20
+最后更新: 2026-10-13 14:00
 
 ## 当前状态
 
+- 免费额度已修复：find 20 / collect 10，扣减生效，弹窗数字动态同步
+- 找货进度阶段上报：5 个真实阶段 + 非阻塞 + 序号防乱序
+- 产品名改为"TikTok数据服务系统"（首页 + 内页）
 - HTTPS 已上线：https://frontharbor.cn 可访问（证书有效期至 2027-01-10，Basic Auth 保留）
 - 页脚已加 ICP 备案号（陕ICP备2026028540号）：首页 + 内页
 - 公安联网备案已提交（汉台区网安大队审核中，1-3 工作日）
 - 扩展找货已对齐 Playwright 规则（翻页 + 分档重扫 + 回头率初筛 + 详情缓存）
 - 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成）
 - Playwright 死代码已清理，产品运行链路零 Playwright 依赖
-- Playwright 定位：月度数据生产工具（本地跑，不上云）
 - Phase 2 进入真实用户行为验证阶段
 
 ## 已完成能力速览
@@ -18,7 +20,7 @@
 - Web V1 类目路径已修复（app/data/泰国TK官方类目.txt，不再依赖 Desktop）
 - 服务器部署：CVM 118.89.85.175，systemd frontharbor，Nginx 反代 + Basic Auth
 - 9 月数据上线：keyword_metric 28014 / opportunity_analysis 2493 / 161 L2
-- 用户系统：匿名 UUID + user_usage 计数（find 10 / collect 5）
+- 用户系统：匿名 UUID + user_usage 计数（find 20 / collect 10）
 - 用户行为埋点：user_events 表 + POST /api/track
   - category_selected / opportunity_view / opportunity_detail
   - search_1688_click / find_supplier_click / apply_experience（历史）
@@ -28,6 +30,9 @@
 - 妙手采集（v0.5.1）：后台标签页 + 弹窗即完成，用户视角零跳转
 - HTTPS 上线（v0.5.2）：https://frontharbor.cn（证书至 2027-01-10）
 - 备案号页脚（v0.5.2）：陕ICP备2026028540号，首页 + 内页
+- 额度扣减修复（v0.5.3）：find 20 / collect 10，弹窗动态同步
+- 产品改名（v0.5.4）：TikTok数据服务系统
+- 找货进度上报（v0.5.5）：5 阶段 + 非阻塞 + 序号防乱序
 
 ## 下一步
 

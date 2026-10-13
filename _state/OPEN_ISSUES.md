@@ -1,5 +1,5 @@
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 2026-10-12 13:20
+最后更新: 2026-10-13 14:00
 项目根: D:\tiktok-ai-sourcing
 
 ## P0 — 当前阻塞
@@ -31,6 +31,10 @@
 - HTTPS 上线（2026-10-12，commit f850335，tag v0.5.2-https-beian-footer）。
 - 备案号页脚（2026-10-12，commit f850335，陕ICP备2026028540号，首页 + 内页）。
 - 公安联网备案提交（2026-10-12，汉台区网安大队审核中，1-3 工作日）。
+- 额度扣减 bug 修复（2026-10-13，commit b218fa6，tag v0.5.3-quota-fix）：find 20/collect 10。
+- 产品改名（2026-10-13，commit e194c59，tag v0.5.4-rename）：TikTok数据服务系统。
+- 找货进度阶段上报（2026-10-13，commit fe37e63）：5 阶段 + 非阻塞 + 序号防乱序。
+- 弹窗额度动态化（2026-10-13，commit 4c2a810）：QUOTA_CACHE + no-store + 文字不换行。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。

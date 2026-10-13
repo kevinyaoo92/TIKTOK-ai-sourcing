@@ -35,20 +35,20 @@ AI 必须立刻主动提出上述四步，不能等用户问。
 
 ---
 
-# SESSION STATE — 2026-10-12 13:05
+# SESSION STATE — 2026-10-13 12:38
 ## 1. Git
 
 ```
+4c2a810 弹窗额度数字动态化 + 提示文字不换行 + /api/usage 禁缓存
+fe37e63 找货进度阶段上报（5 阶段 + 非阻塞 + 序号防乱序）
+e194c59 产品名改为 TikTok数据服务系统
+b218fa6 修复额度扣减 bug + 额度提升到 20/10
+16905ed 状态收尾：HTTPS 上线 + 备案号页脚 + 公安备案提交
 f850335 备案号页脚 + Nginx HTTPS 配置备份
 b2ee851 状态收尾：扩展找货对齐 + Playwright 清理 + 妙手焦点优化
 e691d89 妙手采集：后台标签页 + 删除采集箱核查步骤
 699c6c9 清理 Playwright 死代码：产品链路彻底摆脱服务器侧浏览器
 162604c 扩展找货对齐 Playwright 规则：翻页 + 分档重扫 + 回头率初筛 + 详情缓存
-6c8026e 修复 pickSearchTerm：优先用卡片中文商品名，括号和斜杠替换为空格，内容全保留
-839432a 部署清单：新增 DEPLOY_CHECKLIST.md + 扩展 BACKEND 切生产
-8927222 妙手切扩展：登录检测/打开登录页/采集全部走扩展任务，清除旧链路调用和死代码
-984727f 收尾：刷新 SESSION_STATE 快照
-50c6bf5 恢复妙手按钮：卡片加妙手采集+进入妙手采集箱，弹窗顶部加登陆妙手
 
 ---
 ?? _state/_tiny.txt
@@ -57,7 +57,7 @@ e691d89 妙手采集：后台标签页 + 删除采集箱核查步骤
 ?? _state/regression2.py
 
 ---
-* main f850335 [origin/main] 备案号页脚 + Nginx HTTPS 配置备份
+* main 4c2a810 [origin/main] 弹窗额度数字动态化 + 提示文字不换行 + /api/usage 禁缓存
 
 ```
 ## 2. 数据库
@@ -79,14 +79,16 @@ active_period = 2026-09
 
 # 当前任务（进度存根）
 
-最后更新: 2026-10-12 10:45
+最后更新: 2026-10-12 13:20
 
 ## 当前状态
 
+- HTTPS 已上线：https://frontharbor.cn 可访问（证书有效期至 2027-01-10，Basic Auth 保留）
+- 页脚已加 ICP 备案号（陕ICP备2026028540号）：首页 + 内页
+- 公安联网备案已提交（汉台区网安大队审核中，1-3 工作日）
 - 扩展找货已对齐 Playwright 规则（翻页 + 分档重扫 + 回头率初筛 + 详情缓存）
-- 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成，不再自动进采集箱核查）
-- Playwright 死代码已清理（server.py 12 处 + 删 supplier_finder.py / miaoshou_collector.py）
-- 产品运行链路：扩展 + 线上 API + AI 分析，零 Playwright 依赖
+- 妙手采集已优化焦点体验（后台标签页 + 弹窗即完成）
+- Playwright 死代码已清理，产品运行链路零 Playwright 依赖
 - Playwright 定位：月度数据生产工具（本地跑，不上云）
 - Phase 2 进入真实用户行为验证阶段
 
@@ -103,11 +105,15 @@ active_period = 2026-09
 - 找货入口正式 UI：找优质货源 + 会员专享弹窗 + 立即找货
 - 扩展找货（v0.5.0）：翻页 + 分档重扫（严格→中等→宽松→最宽）+ 回头率初筛 + 详情缓存
 - 妙手采集（v0.5.1）：后台标签页 + 弹窗即完成，用户视角零跳转
+- HTTPS 上线（v0.5.2）：https://frontharbor.cn（证书至 2027-01-10）
+- 备案号页脚（v0.5.2）：陕ICP备2026028540号，首页 + 内页
 
 ## 下一步
 
+- 等公安联网备案审核通过（1-3 工作日）
+- HTTPS 稳定几天后：扩展切 HTTPS（manifest.json + background.js BACKEND）
+- 扩展切 HTTPS 后：撤 Basic Auth
 - 等真实用户数据验证 Phase 2 商业价值
-- ICP 备案通过后：域名解析 + HTTPS + 撤 Basic Auth
 - 观察漏斗，决定是否进入 Phase 3（最小 Extension POC）
 
 ## 服务器状态
@@ -364,17 +370,16 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 ### OPEN_ISSUES.md
 
 # OPEN ISSUES — tiktok-ai-sourcing
-最后更新: 2026-10-12 10:45
+最后更新: 2026-10-12 13:20
 项目根: D:\tiktok-ai-sourcing
 
 ## P0 — 当前阻塞
-1. ICP 备案审核中：腾讯云初审 + 陕西管局审核（7-10 工作日），等 010 电话 + 幕布拍照。
-2. 域名解析 + HTTPS：等备案通过后做。
-3. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
+1. 公安联网备案审核中：汉台区网安大队（1-3 工作日），等短信通知（13186335720）。
+2. 1688 数据合规：TikTok 数据转卖第三方是否允许，未确认。
 
 ## P1 — 待办
-1. 撤除 Basic Auth（域名 + HTTPS 上线后）。
-2. 妙手集成已切扩展（v0.5.1），Playwright 妙手链路已删。
+1. 扩展切 HTTPS：BACKEND 从 http://118.89.85.175 改 https://frontharbor.cn（等 HTTPS 稳定几天）
+2. 撤除 Basic Auth（扩展切 HTTPS 后）
 3. 项目卫生：C 盘空壳 tiktok-audit、云盘副本、opportunity.html.bak_* 备份清理。
 
 ## P2 — 长期
@@ -394,6 +399,9 @@ opportunity.html 620 行 visibilitychange 监听 → checkMiaoshouLogin()
 - 扩展找货对齐 Playwright 规则（2026-10-11，commit 162604c，tag v0.5.0-extension-rules-aligned）。
 - 清理 Playwright 死代码（2026-10-11，commit 699c6c9，删 server.py 12 处 + 2 文件）。
 - 妙手焦点优化（2026-10-12，commit e691d89，tag v0.5.1-miaoshou-focus-fix）。
+- HTTPS 上线（2026-10-12，commit f850335，tag v0.5.2-https-beian-footer）。
+- 备案号页脚（2026-10-12，commit f850335，陕ICP备2026028540号，首页 + 内页）。
+- 公安联网备案提交（2026-10-12，汉台区网安大队审核中，1-3 工作日）。
 
 ## 工作规则
 21. Python 走文件，不用 python -c。
@@ -853,4 +861,4 @@ DB            : data/tiktok_market.db
 
 ## 5. 本次快照生成时间
 
-2026-10-12 13:05:45
+2026-10-13 12:38:09
