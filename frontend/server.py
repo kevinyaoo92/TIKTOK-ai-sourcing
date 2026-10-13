@@ -250,6 +250,15 @@ def api_poc_task_create(body: dict) -> dict:
     keyword = (body.get("keyword") or "").strip() or None
     offer_id = (body.get("offer_id") or "").strip() or None
     uuid_str = (body.get("uuid") or "").strip() or None
+
+    QUOTA_ACTION = {"find_full": "find", "miaoshou_collect": "collect"}
+    action = QUOTA_ACTION.get(task_type)
+    quota_result = None
+    if action and uuid_str:
+        quota_result = user_usage.check_and_decrement(MARKET_DB, uuid_str, action)
+        if not quota_result.get("ok"):
+            return {"status": "quota_exceeded", "quota": quota_result, "task_type": task_type}
+
     task_id = "task-" + uuid.uuid4().hex  # 32 hex chars = 128-bit entropy
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     with _POC_LOCK:
@@ -264,7 +273,7 @@ def api_poc_task_create(body: dict) -> dict:
             "completed_at": None,
         }
     print(f"[POC_TASK] created task_id={task_id} type={task_type} kw={keyword!r} oid={offer_id!r}", flush=True)
-    return {"status": "ok", "task_id": task_id, "task_status": "pending"}
+    return {"status": "ok", "task_id": task_id, "task_status": "pending", "quota": quota_result}
 
 
 def api_poc_task_pending() -> dict:

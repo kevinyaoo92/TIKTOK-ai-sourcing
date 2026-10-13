@@ -2,8 +2,8 @@
 """用户免费额度：匿名 UUID 计数 + 扣减。
 
 额度定义：
-- find: 找货 10 次
-- collect: 采集 5 次
+- find: 找货 20 次
+- collect: 采集 10 次
 两者独立计数。
 """
 from __future__ import annotations
@@ -13,8 +13,8 @@ from datetime import datetime
 from pathlib import Path
 
 QUOTA = {
-    "find": 10,
-    "collect": 5,
+    "find": 20,
+    "collect": 10,
 }
 
 

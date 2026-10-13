@@ -654,7 +654,7 @@
           '<h3 class="text-xl font-semibold text-slate-800 mb-2">找优质货源</h3>' +
           '<p class="text-sm text-slate-600 mb-6">会员专享功能</p>' +
           '<div class="rounded-lg bg-brand/5 border border-brand/20 px-6 py-4 mb-5 inline-block">' +
-            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">10</span> 次免费体验机会</p>' +
+            '<p class="text-sm text-brand">你当前有 <span class="text-2xl font-bold align-middle">20</span> 次免费体验机会</p>' +
           '</div>' +
           '<p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">使用后，系统将根据当前商品机会，自动为你寻找匹配的优质 1688 货源。</p>' +
           '<div class="flex gap-3 justify-center">' +
@@ -909,7 +909,12 @@
         body: JSON.stringify({ task_type: "find_full", keyword: kw, uuid: getUUID() })
       }).then(function (r) { return r.json(); })
         .then(function (d) {
+          if (d && d.status === "quota_exceeded") {
+            renderFindError("免费找货次数已用完，升级付费后可继续使用");
+            return;
+          }
           if (!d || d.status !== "ok") { renderFindError("创建任务失败"); return; }
+          refreshQuota();
           FIND_SRC.taskId = d.task_id;
           try { localStorage.setItem("frontharbor_find_task", JSON.stringify({taskId: d.task_id, startedAt: FIND_SRC.startedAt, oppId: FIND_SRC.oppId})); } catch (e) {}
           track("find_task_created", { opportunity_id: FIND_SRC.oppId, task_id: d.task_id });
@@ -1183,12 +1188,19 @@
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({ task_type: "miaoshou_collect", offer_id: oid, uuid: getUUID() })
         }).then(function(r){ return r.json(); }).then(function(d){
+          if (d && d.status === "quota_exceeded") {
+            us.disabled = false;
+            us.textContent = "妙手采集";
+            alert("免费采集次数已用完，升级付费后可继续使用");
+            return;
+          }
           if (!d || d.status !== "ok") {
             us.disabled = false;
             us.textContent = "妙手采集";
             alert("创建采集任务失败");
             return;
           }
+          refreshQuota();
           _pollTaskOnce(d.task_id, function(task){
             var p = task.payload || {};
             var outcome = p.outcome || "failed";
